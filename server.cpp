@@ -2,17 +2,103 @@
 #include <string> 
 #include <sys/socket.h>
 #include <unistd.h>
-#include <vector>
 
 #include <sys/epoll.h>
-#include <sstream>
-
 #include <netinet/in.h>
+#include <vector>
+#include <sstream>
 #include <algorithm>
 
 #define PORT 8080
 #define BUFFER_SIZE 1024
 #define MAX_EVENTS 10
+
+
+void sendToClients(std::vector<int>& clients, std::string message) {
+    // Distribute the message to clients in the list
+    for (int clientSocket : clients) {
+        // Send to connected clients that are not the server and message sender
+        std::cout << "Sending message to client " << clientSocket << std::endl;
+        send(clientSocket, message.c_str(), message.size(), 0);
+    }
+
+    return;
+}
+
+
+void addClient(int serverSocket, std::vector<int>& clients, int epoll_fd) {
+    int clientSocket = accept(serverSocket, nullptr, nullptr);
+
+    if (clientSocket == -1) {
+        std::cerr << "Failed to accept client connection" << std::endl;
+        return;
+    }
+
+    std::cout << "New client connected: " << clientSocket << std::endl;
+
+    epoll_event clientEvent{};
+    clientEvent.events = EPOLLIN;
+    clientEvent.data.fd = clientSocket;
+
+    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, clientSocket, &clientEvent) == -1) {
+        std::cerr << "Failed to add client socket to epoll" << std::endl;
+        close(clientSocket);
+    }
+
+    // Create a list of recipients before adding the new client
+    std::vector<int> recipients = clients;
+
+    clients.push_back(clientSocket);
+
+    std::string welcomeMessage = "Welcome to the server!\n";
+    send(clientSocket, welcomeMessage.c_str(), welcomeMessage.size(), 0);
+
+    // Notify other clients that the new client has joined
+    std::string message = "Client " + std::to_string(clientSocket) + " connected";
+
+    sendToClients(recipients, message);
+
+    return;
+}
+
+
+// Message from client
+void handleMessage(int senderSocket, std::vector<int>& clients, int epoll_fd) {
+    std::string message = "Client " + std::to_string(senderSocket);
+
+    // Create a list of recipients for the message
+    std::vector<int> recipients = clients;
+    recipients.erase(
+            std::remove(recipients.begin(), recipients.end(), senderSocket),
+            recipients.end()
+            );
+
+    char buffer[BUFFER_SIZE] = {0};
+    int bytesReceived = recv(senderSocket, buffer, sizeof(buffer) - 1, 0);
+
+    if (bytesReceived <= 0) {
+        // Client disconnected, close socket and remove from set
+        std::cout << "Client disconnected: " << senderSocket << std::endl;
+
+        // Remove the disconnected client from the clients list
+        clients = recipients;
+
+        close(senderSocket);
+        epoll_ctl(epoll_fd, EPOLL_CTL_DEL, senderSocket, nullptr);
+
+        message += " disconnected";
+    }
+    else {
+        std::cout << "Received from client " << senderSocket << ": " << buffer << std::endl;
+        message += ": ";
+        message += buffer;
+    }
+
+    sendToClients(recipients, message);
+
+    return;
+}
+
 
 int main() {
     int serverSocket = socket(AF_INET, SOCK_STREAM, 0);
@@ -59,68 +145,18 @@ int main() {
         }
 
         for (int i = 0; i < numEvents; i++) {
+            // Select the socket from which an event was received
             int currentSocket = events[i].data.fd;
 
-            // Initial connection
+            // Initial connection (event is coming from the server socket)
             if (currentSocket == serverSocket) {
-                int clientSocket = accept(serverSocket, nullptr, nullptr);
-
-                if (clientSocket == -1) {
-                    std::cerr << "Failed to accept client connection" << std::endl;
-                    continue;
-                }
-                
-                std::cout << "New client connected: " << clientSocket << std::endl;
-
-                epoll_event clientEvent{};
-                clientEvent.events = EPOLLIN;
-                clientEvent.data.fd = clientSocket;
-
-                if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, clientSocket, &clientEvent) == -1) {
-                    std::cerr << "Failed to add client socket to epoll" << std::endl;
-                    close(clientSocket);
-                }
-
-                clients.push_back(clientSocket);
-                std::string welcomeMsg = "Welcome to the server!\n";
-                send(clientSocket, welcomeMsg.c_str(), welcomeMsg.size(), 0);
+                addClient(currentSocket, clients, epoll_fd);
             }
             else {
-                // Message from client
-                char buffer[BUFFER_SIZE] = {0};
-
-                int bytesReceived = recv(currentSocket, buffer, sizeof(buffer) - 1, 0);
-        
-                if (bytesReceived <= 0) {
-                    // Client disconnected, close socket and remove from set
-                    std::cout << "Client disconnected: " << currentSocket << std::endl;
-
-                    clients.erase(
-                        std::remove(clients.begin(), clients.end(), currentSocket),
-                        clients.end()
-                    );
-
-                    close(currentSocket);
-                    epoll_ctl(epoll_fd, EPOLL_CTL_DEL, currentSocket, nullptr);
-                }
-                else {
-                    std::cout << "Received from client " << currentSocket << ": " << buffer << std::endl;
-
-                    std::string message = "Client " + std::to_string(currentSocket) + ": " + buffer;
-
-                    for (int otherClientSocket : clients) {
-                        // Send to connected clients that are not the server and message sender
-                        if (otherClientSocket != currentSocket) {
-                            std::cout << "Sending message to client " << otherClientSocket << std::endl;
-                            send(otherClientSocket, message.c_str(), sizeof(message) + 1, 0);
-                        }
-                    }
-                }
+                // Communication received from a client socket
+                handleMessage(currentSocket, clients, epoll_fd);
             }
         }
-
-
-        //close(clientSocket);
     }
 
     // Interrupt handling for later

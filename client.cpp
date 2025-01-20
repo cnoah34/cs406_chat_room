@@ -2,10 +2,6 @@
 #include <string>
 #include <sys/socket.h>
 #include <unistd.h>
-#include <vector>
-
-#include <sys/epoll.h>
-#include <sstream>
 
 #include <netinet/in.h>
 

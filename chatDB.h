@@ -1,5 +1,7 @@
+#ifndef CHATDB_H_INCLUDED
+#define CHATDB_H_INCLUDED
+
 // Compile with: g++ connect.cpp [-L <dir_containing_libscylla-cpp-driver.so> -Wl,-rpath,<dir_containing_libscylla-cpp-driver.so> -I <path_to_cassandra.h>] -lscylla-cpp-driver -o connect
-// Connecting to ScyllaDB with a simple C++ program
 #include <cassandra.h>
 #include <iostream>
 #include <chrono>
@@ -176,4 +178,6 @@ void ChatRoomDB::SelectQuery(const char* query) {
 
     return;
 }
+
+#endif
 

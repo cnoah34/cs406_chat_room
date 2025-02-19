@@ -9,9 +9,13 @@
 #include <sstream>
 #include <algorithm>
 
+// Custom
+#include "chatDB.h"
+
 #define PORT 8080
 #define BUFFER_SIZE 1024
 #define MAX_EVENTS 10
+#define DATABASE_IP "172.19.0.2"
 
 
 void sendToClients(std::vector<int>& clients, std::string message) {
@@ -135,6 +139,10 @@ int main() {
 
     std::vector<epoll_event> events(MAX_EVENTS);
     std::vector<int> clients;
+
+    // Connect to the ScyllaDB database
+    ChatRoomDB database(DATABASE_IP);
+    database.Query("SELECT * FROM chat.messages WHERE room_id=0;");
 
     while (1) {
         int numEvents = epoll_wait(epoll_fd, events.data(), MAX_EVENTS, -1);

@@ -36,7 +36,10 @@ int main() {
     serverAddress.sin_port = htons(PORT);
     serverAddress.sin_addr.s_addr = INADDR_ANY;
 
-    connect(clientSocket, (struct sockaddr*)&serverAddress, sizeof(serverAddress));
+    if (!connect(clientSocket, (struct sockaddr*)&serverAddress, sizeof(serverAddress))) {
+        std::cerr << "Failed to connect to the server at port: " <<  PORT << std::endl;
+        return -1;
+    }
 
     std::cout << "Connected to the server. Type messages below and use CTRL+C to quit." << std::endl;
     

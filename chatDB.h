@@ -5,33 +5,75 @@
 #include <chrono>
 #include <ctime>
 #include <iomanip>
+#include <vector>
 
-void iterate_over_rows(CassFuture* future) {
-    const CassResult* result = cass_future_get_result(future);
-    CassIterator* iterator = cass_iterator_from_result(result);
+struct Message {
+    cass_int32_t room_id;
+    cass_int64_t created_at;
+    const char* content;
+    cass_int32_t message_id;
+    cass_int32_t user_id;
+};
+
+struct User {
+    cass_int32_t user_id;
+    cass_int64_t created_at;
+    const char* password;
+    std::vector<int> room_ids;
+    const char* username;
+};
+
+struct Room {
+    cass_int32_t room_id;
+    std::vector<int> admin_ids;
+    cass_int64_t created_at;
+    const char* name;
+    std::vector<int> user_ids;
+};
+
+
+void dynamic_read(const CassResult* result) {
+    CassIterator* row_iterator = cass_iterator_from_result(result);
+
+    while (cass_iterator_next(row_iterator)) {
+        const CassRow* row = cass_iterator_get_row(row_iterator);
+
+    }
+
+    return;
+}
+
+std::vector<int> read_set(const CassValue* set) {
+    CassIterator* iterator = cass_iterator_from_collection(set);
+
+    std::vector<int> vec;
 
     while (cass_iterator_next(iterator)) {
-        const CassRow* row = cass_iterator_get_row(iterator);
+        const CassValue* iter_value = cass_iterator_get_value(iterator);
+        cass_int32_t value;
 
-        if (row) {
-            const char* test_value;
-            size_t test_length;
-            const CassValue* column1 = cass_row_get_column(row, 0);
-            cass_value_get_string(column1, &test_value, &test_length);
-            std::cout << "test: " << test_value << std::endl;
-
-            cass_int32_t id_value;
-            const CassValue* column2 = cass_row_get_column(row, 1);
-            cass_value_get_int32(column2, &id_value);
-            std::cout << "id: " << id_value << std::endl;
-        }
-        else {
-            std::cerr << "iterate_over_rows(): error processing row from iterator" << std::endl;
+        if (cass_value_get_int32(iter_value, &value) == CASS_OK) {
+            vec.push_back(value);
         }
     }
 
-    cass_iterator_free(iterator);
-    cass_result_free(result);
+    return vec;
+}
+
+void print_message(Message message) {
+    std::cout << std::endl << "room_id: " << message.room_id << std::endl;
+
+    std::time_t time_sec = message.created_at / 1000;   // Convert to seconds
+    std::tm* tm_time = std::gmtime(&time_sec);          // Convert to UTC
+    std::cout << "timestamp: " << std::put_time(tm_time, "%Y-%m-%d %H:%M:%S") << std::endl;
+
+    std::cout << "content: " << message.content << std::endl;
+
+    std::cout << "message_id: " << message.message_id << std::endl;
+
+    std::cout << "user_id: " << message.user_id << std::endl << std::endl;
+
+    return;
 }
 
 void read_messages(CassFuture* future) {
@@ -42,30 +84,80 @@ void read_messages(CassFuture* future) {
         const CassRow* row = cass_iterator_get_row(iterator);
 
         if (row) {
-            cass_int32_t room_id;
-            cass_value_get_int32(cass_row_get_column(row, 0), &room_id);
-            std::cout << "room_id: " << room_id << std::endl;
+            Message message;
 
-            cass_int64_t timestamp;
-            cass_value_get_int64(cass_row_get_column(row, 1), &timestamp);
-            std::time_t time_sec = timestamp / 1000;    // Convert to seconds
-            std::tm* tm_time = std::gmtime(&time_sec);  // Convert to UTC
-            std::cout << "timestamp: " << std::put_time(tm_time, "%Y-%m-%d %H:%M:%S") << std::endl;
 
-            const char* content;
+            cass_value_get_int32(cass_row_get_column_by_name(row, "room_id"), &message.room_id);
+
+            cass_value_get_int64(cass_row_get_column_by_name(row, "created_at"), &message.created_at);
+
             size_t content_length;
-            cass_value_get_string(cass_row_get_column(row, 2), &content, &content_length);
-            std::cout << "content: " << content << std::endl;
+            cass_value_get_string(cass_row_get_column_by_name(row, "content"), &message.content, &content_length);
 
-            cass_int32_t message_id;
-            cass_value_get_int32(cass_row_get_column(row, 3), &message_id);
-            std::cout << "message_id: " << message_id << std::endl;
+            cass_value_get_int32(cass_row_get_column_by_name(row, "message_id"), &message.message_id);
 
-            cass_int32_t user_id;
-            cass_value_get_int32(cass_row_get_column(row, 4), &user_id);
-            std::cout << "user_id: " << user_id << std::endl;
+            cass_value_get_int32(cass_row_get_column_by_name(row, "user_id"), &message.user_id);
 
-            std::cout << std::endl;
+
+            print_message(message);
+        }
+        else {
+            std::cerr << "iterate_over_rows(): error processing row from iterator" << std::endl;
+        }
+    }
+
+    cass_iterator_free(iterator);
+    cass_result_free(result);
+}
+
+void print_user(User user) {
+    std::cout << std::endl << "user_id: " << user.user_id << std::endl;
+
+    std::time_t time_sec = user.created_at / 1000;   // Convert to seconds
+    std::tm* tm_time = std::gmtime(&time_sec);          // Convert to UTC
+    std::cout << "timestamp: " << std::put_time(tm_time, "%Y-%m-%d %H:%M:%S") << std::endl;
+
+    std::cout << "password: " << user.password << std::endl;
+
+    std::cout << "room_ids: [";
+    for (size_t i = 0; i < user.room_ids.size(); i++) {
+        std::cout << user.room_ids[i];
+
+        if (i != user.room_ids.size() - 1) {
+            std::cout << ", ";
+        }
+    }
+    std::cout << "]" << std::endl;
+
+    std::cout << "username: " << user.username << std::endl;
+
+    return;
+}
+
+void read_users(CassFuture* future) {
+    const CassResult* result = cass_future_get_result(future);
+    CassIterator* iterator = cass_iterator_from_result(result);
+
+    while (cass_iterator_next(iterator)) {
+        const CassRow* row = cass_iterator_get_row(iterator);
+
+        if (row) {
+            User user;
+
+
+            cass_value_get_int32(cass_row_get_column_by_name(row, "user_id"), &user.user_id);
+            cass_value_get_int64(cass_row_get_column_by_name(row, "created_at"), &user.created_at);
+
+            size_t password_length;
+            cass_value_get_string(cass_row_get_column_by_name(row, "password"), &user.password, &password_length);
+
+            user.room_ids = read_set(cass_row_get_column_by_name(row, "room_ids"));
+
+            size_t username_length;
+            cass_value_get_string(cass_row_get_column_by_name(row, "username"), &user.username, &username_length);
+
+
+            print_user(user);
         }
         else {
             std::cerr << "iterate_over_rows(): error processing row from iterator" << std::endl;
@@ -124,7 +216,8 @@ void ChatRoomDB::Query(const char* query) {
 
     if (cass_future_error_code(result_future) == CASS_OK) {
         //iterate_over_rows(result_future);
-        read_messages(result_future);
+        //read_messages(result_future);
+        read_users(result_future);
     }
     else {
         const char* message;

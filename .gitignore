@@ -1,3 +1,2 @@
-server
-client
+*.out
 cpp-driver

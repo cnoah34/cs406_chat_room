@@ -142,9 +142,9 @@ int main() {
 
     // Connect to the ScyllaDB database
     ChatRoomDB database(DATABASE_IP);
-    //database.Query("SELECT * FROM chat.messages WHERE room_id=0;");
-    //database.Query("SELECT * FROM chat.messages;");
-    database.Query("SELECT * FROM chat.users;");
+    //database.SelectQuery("SELECT * FROM chat.messages WHERE room_id=0;");
+    //database.SelectQuery("SELECT * FROM chat.messages;");
+    //database.SelectQuery("SELECT * FROM chat.users;");
 
     while (1) {
         int numEvents = epoll_wait(epoll_fd, events.data(), MAX_EVENTS, -1);

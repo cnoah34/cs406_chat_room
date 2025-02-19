@@ -91,12 +91,13 @@ void dynamic_read(CassFuture* future) {
                     cass_value_get_int64(column_value, &timestamp_value);
                     value = read_timestamp(timestamp_value);
                     break;
-                case CASS_VALUE_TYPE_VARCHAR:
+                case CASS_VALUE_TYPE_VARCHAR: {
                     const char* text_value;
                     size_t text_length;
                     cass_value_get_string(column_value, &text_value, &text_length);
-                    value = text_value;
+                    value = std::string(text_value, text_length);
                     break;
+                }
                 case CASS_VALUE_TYPE_SET:
                     value = read_set(column_value);
                     break;
@@ -169,6 +170,9 @@ void ChatRoomDB::SelectQuery(const char* query) {
         cass_future_error_message(result_future, &message, &message_length);
         fprintf(stderr, "Unable to connect: '%.*s'\n", (int)message_length, message);
     }
+
+    cass_statement_free(statement);
+    cass_future_free(result_future);
 
     return;
 }

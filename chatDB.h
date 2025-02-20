@@ -8,31 +8,25 @@
 #include <ctime>
 #include <iomanip>
 #include <sstream>
+#include <map>
+#include <set>
 
+#include <json.hpp>
+using json = nlohmann::json;
 
-std::string read_set(const CassValue* set) {
+std::set<int> read_set(const CassValue* set) {
     CassIterator* iterator = cass_iterator_from_collection(set);
 
-    std::string result = "[";
+    std::set<int> result;
 
-    bool first = true;
     while (cass_iterator_next(iterator)) {
         const CassValue* iter_value = cass_iterator_get_value(iterator);
         cass_int32_t value;
 
         if (cass_value_get_int32(iter_value, &value) == CASS_OK) {
-            if (!first) {
-                result += ", ";
-            }
-            else {
-                first = false;
-            }
-
-            result += std::to_string(value);
+            result.insert(value);
         }
     }
-
-    result += "]";
 
     cass_iterator_free(iterator);
 
@@ -43,7 +37,8 @@ std::string read_timestamp(cass_int64_t timestamp) {
     std::time_t time_sec = timestamp / 1000;    // Convert to seconds
     std::tm* tm_time = std::gmtime(&time_sec);  // Convert to UTC
 
-    const char* format = "%Y-%m-%d %H:%M:%S";
+    // ISO 8601 format "YYYY-MM-DDTHH:MM:SSZ"
+    const char* format = "%Y-%m-%dT%H:%M:%SZ";
     std::stringstream ss;
 
     ss << std::put_time(tm_time, format);
@@ -61,8 +56,12 @@ void dynamic_read(CassFuture* future) {
     }
 
     CassIterator* row_iterator = cass_iterator_from_result(result);
+    
+    json large_json;
 
     while (cass_iterator_next(row_iterator)) {
+        json json_object;
+        
         const CassRow* row = cass_iterator_get_row(row_iterator);
 
         size_t column_count = cass_result_column_count(result);
@@ -86,30 +85,33 @@ void dynamic_read(CassFuture* future) {
                 case CASS_VALUE_TYPE_INT:
                     cass_int32_t int_value;
                     cass_value_get_int32(column_value, &int_value);
-                    value = std::to_string(int_value);
+                    //value = std::to_string(int_value);
+                    json_object[column_name] = int_value;
                     break;
                 case CASS_VALUE_TYPE_TIMESTAMP:
                     cass_int64_t timestamp_value;
                     cass_value_get_int64(column_value, &timestamp_value);
-                    value = read_timestamp(timestamp_value);
+                    json_object[column_name] = read_timestamp(timestamp_value);
                     break;
                 case CASS_VALUE_TYPE_VARCHAR: {
                     const char* text_value;
                     size_t text_length;
                     cass_value_get_string(column_value, &text_value, &text_length);
-                    value = std::string(text_value, text_length);
+                    json_object[column_name] = std::string(text_value, text_length);
                     break;
                 }
                 case CASS_VALUE_TYPE_SET:
-                    value = read_set(column_value);
+                    json_object[column_name] = read_set(column_value);
                     break;
                 default:
                     break;
             }
-
-            std::cout << column_name << ": " << value << std::endl;
         }
+
+        large_json.push_back(json_object);
     }
+
+    std::cout << large_json.dump(4) << std::endl;
 
     cass_iterator_free(row_iterator);
     cass_result_free(result);

@@ -1,5 +1,7 @@
 #include <iostream>
+#include <csignal>
 #include <string> 
+#include <atomic>
 #include <sys/socket.h>
 #include <unistd.h>
 
@@ -18,7 +20,18 @@
 #define DATABASE_IP "172.19.0.2"
 
 
-void sendToClients(std::vector<int>& clients, std::string message) {
+std::atomic<bool> keep_running(true);
+
+void signal_handler(int signal) {
+    if (signal == SIGINT) {
+        keep_running = false;
+        std::cout << "SIGINT received, exiting program" << std::endl;
+    }
+
+    return;
+}
+
+void send_to_clients(std::vector<int>& clients, std::string message) {
     // Distribute the message to clients in the list
     for (int clientSocket : clients) {
         // Send to connected clients that are not the server and message sender
@@ -29,8 +42,7 @@ void sendToClients(std::vector<int>& clients, std::string message) {
     return;
 }
 
-
-void addClient(int serverSocket, std::vector<int>& clients, int epoll_fd) {
+void add_client(int serverSocket, std::vector<int>& clients, int epoll_fd) {
     int clientSocket = accept(serverSocket, nullptr, nullptr);
 
     if (clientSocket == -1) {
@@ -60,14 +72,14 @@ void addClient(int serverSocket, std::vector<int>& clients, int epoll_fd) {
     // Notify other clients that the new client has joined
     std::string message = "Client " + std::to_string(clientSocket) + " connected";
 
-    sendToClients(recipients, message);
+    send_to_clients(recipients, message);
 
     return;
 }
 
 
 // Message from client
-void handleMessage(int senderSocket, std::vector<int>& clients, int epoll_fd) {
+void handle_message(int senderSocket, std::vector<int>& clients, int epoll_fd) {
     std::string message = "Client " + std::to_string(senderSocket);
 
     // Create a list of recipients for the message
@@ -98,13 +110,15 @@ void handleMessage(int senderSocket, std::vector<int>& clients, int epoll_fd) {
         message += buffer;
     }
 
-    sendToClients(recipients, message);
+    send_to_clients(recipients, message);
 
     return;
 }
 
 
 int main() {
+    std::signal(SIGINT, signal_handler);
+
     int serverSocket = socket(AF_INET, SOCK_STREAM, 0);
 
     sockaddr_in serverAddress;
@@ -144,12 +158,15 @@ int main() {
     ChatRoomDB database(DATABASE_IP);
     //database.SelectQuery("SELECT * FROM chat.messages WHERE room_id=0;");
     //database.SelectQuery("SELECT * FROM chat.messages;");
-    //database.SelectQuery("SELECT * FROM chat.users;");
+    database.SelectQuery("SELECT * FROM chat.users;");
 
-    while (1) {
+    while (keep_running) {
         int numEvents = epoll_wait(epoll_fd, events.data(), MAX_EVENTS, -1);
         
         if (numEvents == -1) {
+            if (errno == EINTR) {
+                continue;
+            }
             std::cerr << "epoll_wait error" << std::endl;
             break;
         }
@@ -160,21 +177,19 @@ int main() {
 
             // Initial connection (event is coming from the server socket)
             if (currentSocket == serverSocket) {
-                addClient(currentSocket, clients, epoll_fd);
+                add_client(currentSocket, clients, epoll_fd);
             }
             else {
                 // Communication received from a client socket
-                handleMessage(currentSocket, clients, epoll_fd);
+                handle_message(currentSocket, clients, epoll_fd);
             }
         }
     }
 
-    // Interrupt handling for later
-    /*
+    epoll_ctl(epoll_fd, EPOLL_CTL_DEL, serverSocket, nullptr);
     close(serverSocket);
 
-    std::cout << "Server shutdown with no issues." << std::endl;
-    */
+    std::cout << "Server shutdown with no issues" << std::endl;
 
     return 0;
 }

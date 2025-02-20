@@ -46,18 +46,18 @@ std::string read_timestamp(cass_int64_t timestamp) {
     return ss.str();
 }
 
-void dynamic_read(CassFuture* future) {
+json dynamic_read(CassFuture* future) {
+    json large_json;
+
     const CassResult* result = cass_future_get_result(future);
 
     if (cass_result_row_count(result) == 0) {
         std::cout << "Query returned no rows" << std::endl;
         cass_result_free(result);
-        return;
+        return large_json;
     }
 
     CassIterator* row_iterator = cass_iterator_from_result(result);
-    
-    json large_json;
 
     while (cass_iterator_next(row_iterator)) {
         json json_object;
@@ -79,14 +79,16 @@ void dynamic_read(CassFuture* future) {
             // Column type
             CassValueType column_type = cass_value_type(column_value);
 
-            std::string value = "";
-
             switch (column_type) {
                 case CASS_VALUE_TYPE_INT:
                     cass_int32_t int_value;
                     cass_value_get_int32(column_value, &int_value);
-                    //value = std::to_string(int_value);
                     json_object[column_name] = int_value;
+                    break;
+                case CASS_VALUE_TYPE_BIGINT:
+                    cass_int64_t bigint_value;
+                    cass_value_get_int64(column_value, &bigint_value);
+                    json_object[column_name] = bigint_value;
                     break;
                 case CASS_VALUE_TYPE_TIMESTAMP:
                     cass_int64_t timestamp_value;
@@ -111,19 +113,17 @@ void dynamic_read(CassFuture* future) {
         large_json.push_back(json_object);
     }
 
-    std::cout << large_json.dump(4) << std::endl;
-
     cass_iterator_free(row_iterator);
     cass_result_free(result);
 
-    return;
+    return large_json;
 }
 
 class ChatRoomDB {
     public:
         ChatRoomDB(const char* ip);
         ~ChatRoomDB();
-        void SelectQuery(const char* query);
+        json SelectQuery(const char* query);
 
     private:
         // Allocate the objects that represent cluster and session. Remember to free them once no longer needed!
@@ -160,13 +160,15 @@ ChatRoomDB::~ChatRoomDB() {
     cass_session_free(session);
 }
 
-void ChatRoomDB::SelectQuery(const char* query) {
+json ChatRoomDB::SelectQuery(const char* query) {
     CassStatement* statement = cass_statement_new(query, 0);
 
     CassFuture* result_future = cass_session_execute(session, statement);
 
+    json json_result;
+
     if (cass_future_error_code(result_future) == CASS_OK) {
-        dynamic_read(result_future);
+        json_result = dynamic_read(result_future);
     }
     else {
         const char* message;
@@ -178,7 +180,7 @@ void ChatRoomDB::SelectQuery(const char* query) {
     cass_statement_free(statement);
     cass_future_free(result_future);
 
-    return;
+    return json_result;
 }
 
 #endif

@@ -11,8 +11,11 @@
 #include <sstream>
 #include <algorithm>
 
+#include <json.hpp>
+#include <BCrypt.hpp>
+
 // Custom
-#include "chatDB.h"
+#include "chatDB.hpp"
 
 #define PORT 8080
 #define BUFFER_SIZE 1024
@@ -77,7 +80,6 @@ void add_client(int serverSocket, std::vector<int>& clients, int epoll_fd) {
     return;
 }
 
-
 // Message from client
 void handle_message(int senderSocket, std::vector<int>& clients, int epoll_fd) {
     std::string message = "Client " + std::to_string(senderSocket);
@@ -115,6 +117,23 @@ void handle_message(int senderSocket, std::vector<int>& clients, int epoll_fd) {
     return;
 }
 
+void create_user(ChatRoomDB &database, json fields) {
+    std::string username = fields["username"];
+    std::cout << username << std::endl;
+
+    std::string query = "SELECT COUNT(*) FROM chat.users WHERE username = '" + username + "';"; 
+    json check_username = database.SelectQuery(query.c_str());
+
+    if (!check_username.empty() && check_username[0].contains("count") && check_username[0]["count"] != 0) {
+        std::cout << "Error: user with username '" + username + "' already exists" << std::endl;
+        return;
+    }
+    else {
+        std::cout << "Adding user '" + username + "'" << std::endl;
+    }
+
+    return;
+}
 
 int main() {
     std::signal(SIGINT, signal_handler);
@@ -158,7 +177,13 @@ int main() {
     ChatRoomDB database(DATABASE_IP);
     //database.SelectQuery("SELECT * FROM chat.messages WHERE room_id=0;");
     //database.SelectQuery("SELECT * FROM chat.messages;");
-    database.SelectQuery("SELECT * FROM chat.users;");
+    //json result = database.SelectQuery("SELECT * FROM chat.users;");
+    //std::cout << result.dump(3) << std::endl;
+
+    json fields;
+    fields["username"] = "scyllaDBfan24";
+    fields["password"] = "badPword42";
+    create_user(database, fields);
 
     while (keep_running) {
         int numEvents = epoll_wait(epoll_fd, events.data(), MAX_EVENTS, -1);

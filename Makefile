@@ -7,7 +7,7 @@ all: server client
 server: server.cpp chatDB.hpp
 	$(CC) $(CFLAGS) $(INCLUDE) server.cpp \
 	./cpp-driver/build/libscylla-cpp-driver.so -Wl,-rpath,./cpp-driver/build/ \
-	-o server.out
+	-lbcrypt -o server.out
 
 client: client.cpp
 	$(CC) $(CFLAGS) client.cpp -o client.out

@@ -174,7 +174,7 @@ json ChatRoomDB::SelectQuery(const char* query) {
         const char* message;
         size_t message_length;
         cass_future_error_message(result_future, &message, &message_length);
-        fprintf(stderr, "Unable to connect: '%.*s'\n", (int)message_length, message);
+        fprintf(stderr, "Query error: '%.*s'\n", (int)message_length, message);
     }
 
     cass_statement_free(statement);

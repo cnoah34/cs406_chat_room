@@ -1,11 +1,12 @@
 CC=g++
-CFLAGS= -Wall -Wextra
+CFLAGS=-Wall -Wextra
+INCLUDE=-I./cpp-driver/include/ -I./nlohmann/
 
 all: server client
 
 server: server.cpp chatDB.h
-	$(CC) $(CFLAGS) server.cpp \
-	./cpp-driver/build/libscylla-cpp-driver.so -Wl,-rpath,./cpp-driver/build/ -I ./cpp-driver/include/ \
+	$(CC) $(CFLAGS) $(INCLUDE) server.cpp \
+	./cpp-driver/build/libscylla-cpp-driver.so -Wl,-rpath,./cpp-driver/build/ \
 	-o server.out
 
 client: client.cpp

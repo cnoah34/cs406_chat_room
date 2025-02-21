@@ -14,10 +14,11 @@ json get_messages(ChatRoomDB &database, json fields) {
     json response;
     response["success"] = false;
 
-    if (!fields.contains("room_id") || !fields.contains("created_at")) {
+    if (!fields.contains("room_id") || !fields.contains("min_date") || !fields.contains("max_date")) {
         json missing_fields = json::array();
         if (!fields.contains("room_id")) missing_fields.push_back("room_id");
-        if (!fields.contains("created_at")) missing_fields.push_back("created_at");
+        if (!fields.contains("min_date")) missing_fields.push_back("min_date");
+        if (!fields.contains("max_date")) missing_fields.push_back("max_date");
 
         response["error"] = "Missing required field(s)";
         response["missing_fields"] = missing_fields;
@@ -25,10 +26,12 @@ json get_messages(ChatRoomDB &database, json fields) {
     }
 
     std::string room_id = fields["room_id"];
-    std::string created_at = fields["created_at"];
+    std::string min_date = fields["min_date"];
+    std::string max_date = fields["max_date"];
 
     std::string query("SELECT user_id, content, toTimestamp(created_at) AS created_at FROM chat.messages "
-            "WHERE room_id = " + room_id + " AND created_at >= minTimeuuid('" + created_at + "');");
+            "WHERE room_id = " + room_id + " AND created_at >= minTimeuuid('" + min_date + "') "
+            "AND created_at <= maxTimeuuid('" + max_date + "');");
 
     json messages = database.SelectQuery(query.c_str());
 

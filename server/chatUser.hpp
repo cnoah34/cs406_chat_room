@@ -42,7 +42,11 @@ bool verify_user(ChatRoomDB &database, json fields) {
     return false;
 }
 
-void create_user(ChatRoomDB &database, json fields) {
+bool create_user(ChatRoomDB &database, json fields) {
+    if (!fields.contains("username") || !fields.contains("password")) {
+        return false;
+    }
+
     std::string username = fields["username"];
     std::string password = fields["password"];
 
@@ -51,28 +55,26 @@ void create_user(ChatRoomDB &database, json fields) {
 
     if (check_username.empty() || !check_username[0].contains("count") || check_username[0]["count"] != 0) {
         std::cout << "Error: user with username '" + username + "' already exists" << std::endl;
-        return;
-    }
-    else {
-        char salt[BCRYPT_HASHSIZE];
-        char hash[BCRYPT_HASHSIZE];
-        int ret;
-        ret = bcrypt_gensalt(12, salt);
-        if(ret != 0)throw std::runtime_error{"bcrypt: can not generate salt"};
-        ret = bcrypt_hashpw(password.c_str(), salt, hash);
-        if(ret != 0)throw std::runtime_error{"bcrypt: can not generate hash"};
-
-        std::string hashed_pw(hash);
-
-        std::string insert_query = 
-            "INSERT INTO chat.users (user_id, created_at, username, password, salt) "
-            "VALUES (uuid(), toTimestamp(now()), '" + username + "', '" + hashed_pw + "', '" + salt + "');";
-
-        database.SelectQuery(insert_query.c_str());
+        return false;
     }
 
-    return;
+    char salt[BCRYPT_HASHSIZE];
+    char hash[BCRYPT_HASHSIZE];
+    int ret;
+    ret = bcrypt_gensalt(12, salt);
+    if(ret != 0)throw std::runtime_error{"bcrypt: can not generate salt"};
+    ret = bcrypt_hashpw(password.c_str(), salt, hash);
+    if(ret != 0)throw std::runtime_error{"bcrypt: can not generate hash"};
+
+    std::string hashed_pw(hash);
+
+    std::string insert_query = 
+        "INSERT INTO chat.users (user_id, created_at, username, password, salt) "
+        "VALUES (uuid(), toTimestamp(now()), '" + username + "', '" + hashed_pw + "', '" + salt + "');";
+
+    return database.ModifyQuery(insert_query.c_str());
 }
+
 
 #endif
 

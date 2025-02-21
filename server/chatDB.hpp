@@ -14,6 +14,7 @@
 #include <json.hpp>
 using json = nlohmann::json;
 
+
 std::set<int> read_set(const CassValue* set) {
     CassIterator* iterator = cass_iterator_from_collection(set);
 
@@ -102,6 +103,14 @@ json dynamic_read(CassFuture* future) {
                     json_object[column_name] = std::string(text_value, text_length);
                     break;
                 }
+                case CASS_VALUE_TYPE_UUID: {
+                    CassUuid uuid_value;
+                    char uuid_str[CASS_UUID_STRING_LENGTH];
+                    cass_value_get_uuid(column_value, &uuid_value);
+                    cass_uuid_string(uuid_value, uuid_str);
+                    json_object[column_name] = std::string(uuid_str);
+                    break;
+                }
                 case CASS_VALUE_TYPE_SET:
                     json_object[column_name] = read_set(column_value);
                     break;
@@ -124,6 +133,7 @@ class ChatRoomDB {
         ChatRoomDB(const char* ip);
         ~ChatRoomDB();
         json SelectQuery(const char* query);
+        bool ModifyQuery(const char* query);
 
     private:
         // Allocate the objects that represent cluster and session. Remember to free them once no longer needed!
@@ -162,8 +172,8 @@ ChatRoomDB::~ChatRoomDB() {
 
 json ChatRoomDB::SelectQuery(const char* query) {
     CassStatement* statement = cass_statement_new(query, 0);
-
     CassFuture* result_future = cass_session_execute(session, statement);
+    cass_statement_free(statement);
 
     json json_result;
 
@@ -174,14 +184,33 @@ json ChatRoomDB::SelectQuery(const char* query) {
         const char* message;
         size_t message_length;
         cass_future_error_message(result_future, &message, &message_length);
-        fprintf(stderr, "Query error: '%.*s'\n", (int)message_length, message);
+        fprintf(stderr, "SelectQuery() error: '%.*s'\n", (int)message_length, message);
     }
 
-    cass_statement_free(statement);
     cass_future_free(result_future);
 
     return json_result;
 }
+
+bool ChatRoomDB::ModifyQuery(const char* query) {
+    CassStatement* statement = cass_statement_new(query, 0);
+    CassFuture* result_future = cass_session_execute(session, statement);
+    cass_statement_free(statement);
+
+    if (cass_future_error_code(result_future) == CASS_OK) {
+        return true;
+    }
+
+    const char* message;
+    size_t message_length;
+    cass_future_error_message(result_future, &message, &message_length);
+    fprintf(stderr, "ModifyQuery() error: '%.*s'\n", (int)message_length, message);
+
+    cass_future_free(result_future);
+    
+    return false;
+}
+
 
 #endif
 

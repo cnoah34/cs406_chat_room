@@ -163,43 +163,30 @@ int main() {
 
     // Connect to the ScyllaDB database
     ChatRoomDB database(DATABASE_IP);
-    //database.SelectQuery("SELECT * FROM chat.messages WHERE room_id=0;");
-    //database.SelectQuery("SELECT * FROM chat.messages;");
-    //json result = database.SelectQuery("SELECT * FROM chat.users;");
-    //std::cout << result.dump(3) << std::endl;
 
-    /*
+    /* Testing
     json fields;
     fields["username"] = "newUser";
     fields["password"] = "badPword42";
     //bool u = create_user(database, fields);
-    */
 
-    //std::cout << verify_user(database, fields) << std::endl;
+    std::cout << verify_user(database, fields) << std::endl;
    
     json fields;    
     json j;
-    std::string query = "SELECT user_id FROM chat.users WHERE username = 'newUser';";
-    j = database.SelectQuery(query.c_str());
 
     fields["user_id"] = j[0]["user_id"];
-    //fields["user_id"] = "";
+    fields["user_id"] = "";
     fields["name"] = "The Ark";
 
-    //bool r = create_room(database, fields);
-    //std::cout << r << std::endl;
+    j = create_room(database, fields);
 
     j = database.SelectQuery("SELECT room_id FROM chat.rooms WHERE name = 'The Ark';");
     fields["room_id"] = j[0]["room_id"];
-    fields["content"] = "This is the first message!";
+    fields["content"] = "Hello whatsup?";
+    fields["created_at"] = "2025-02-21 00:00:00";
+    */
 
-    //bool m = create_message(database, fields);
-    //std::cout << m << std::endl;
-
-    //query = "SELECT (1) FROM chat.rooms;";
-    //j = database.SelectQuery(query.c_str());
-
-    // add user to room
 
     while (keep_running) {
         int numEvents = epoll_wait(epoll_fd, events.data(), MAX_EVENTS, -1);

@@ -168,25 +168,41 @@ int main() {
     json fields;
     fields["username"] = "newUser";
     fields["password"] = "badPword42";
-    //bool u = create_user(database, fields);
 
     std::cout << verify_user(database, fields) << std::endl;
+    */
    
     json fields;    
     json j;
 
-    fields["user_id"] = j[0]["user_id"];
-    fields["user_id"] = "";
-    fields["name"] = "The Ark";
+    //fields["name"] = "The Ark";
 
-    j = create_room(database, fields);
+    //j = create_room(database, fields);
 
-    j = database.SelectQuery("SELECT room_id FROM chat.rooms WHERE name = 'The Ark';");
-    fields["room_id"] = j[0]["room_id"];
-    fields["content"] = "Hello whatsup?";
-    fields["created_at"] = "2025-02-21 00:00:00";
-    */
+    //json fields["room_id"] = database.SelectQuery("SELECT room_id FROM chat.rooms WHERE name = 'The Ark';");
+    
 
+    fields["user_id"] = "18bb225d-2f55-4df6-b09d-7c4420d527f5";
+    fields["room_id"] = "df5f37cb-de3a-4887-8cf3-abf6a882c088";
+
+    std::cout << remove_admin_from_user(database, fields).dump(3) << std::endl;
+
+    //std::cout << add_user_to_room(database, fields).dump(3) << std::endl;
+    //std::cout << remove_user_from_room(database, fields).dump(3) << std::endl;
+
+    //fields["content"] = "YO?";
+
+    //std::cout << create_message(database, fields) << std::endl;
+
+    //fields["min_date"] = "2025-02-15 00:00:00";
+    //fields["max_date"] = "2025-02-23 00:00:00";
+
+    //json message = get_messages(database, fields)["messages"];
+    //fields["created_at"] = message["created_at"];
+
+    //std::cout << delete_message(database, fields).dump(3) << std::endl;
+
+    //std::cout << get_username(database, fields).dump(3) << std::endl;
 
     while (keep_running) {
         int numEvents = epoll_wait(epoll_fd, events.data(), MAX_EVENTS, -1);

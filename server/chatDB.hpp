@@ -103,6 +103,7 @@ json dynamic_read(CassFuture* future) {
                     json_object[column_name] = std::string(text_value, text_length);
                     break;
                 }
+                case CASS_VALUE_TYPE_TIMEUUID:
                 case CASS_VALUE_TYPE_UUID: {
                     CassUuid uuid_value;
                     char uuid_str[CASS_UUID_STRING_LENGTH];

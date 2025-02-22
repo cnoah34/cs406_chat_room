@@ -1,81 +1,103 @@
 #ifndef CHATMESSAGE_HPP_INCLUDED
 #define CHATMESSAGE_HPP_INCLUDED
 
-#include <string> 
-
-#include <json.hpp>
-#include <BCrypt.hpp>
-
 // Custom
 #include "chatDB.hpp"
+#include "checkFields.hpp"
 
 
-json get_messages(ChatRoomDB &database, json fields) {
-    json response;
-    response["success"] = false;
+json get_messages(ChatRoomDB& database, json& fields) {
+    std::vector<std::string> required_fields = {"room_id", "min_date", "max_date"};
 
-    if (!fields.contains("room_id") || !fields.contains("min_date") || !fields.contains("max_date")) {
-        json missing_fields = json::array();
-        if (!fields.contains("room_id")) missing_fields.push_back("room_id");
-        if (!fields.contains("min_date")) missing_fields.push_back("min_date");
-        if (!fields.contains("max_date")) missing_fields.push_back("max_date");
+    json response = check_fields(fields, required_fields);
 
-        response["error"] = "Missing required field(s)";
-        response["missing_fields"] = missing_fields;
+    if (!response.is_null()) {
         return response;
     }
 
-    std::string room_id = fields["room_id"];
-    std::string min_date = fields["min_date"];
-    std::string max_date = fields["max_date"];
+    response["success"] = false;
 
-    std::string query("SELECT user_id, content, toTimestamp(created_at) AS created_at FROM chat.messages "
+    const std::string room_id = fields["room_id"];
+    const std::string min_date = fields["min_date"];
+    const std::string max_date = fields["max_date"];
+
+    const std::string query("SELECT user_id, content, created_at FROM chat.messages "
             "WHERE room_id = " + room_id + " AND created_at >= minTimeuuid('" + min_date + "') "
             "AND created_at <= maxTimeuuid('" + max_date + "');");
 
-    json messages = database.SelectQuery(query.c_str());
+    const json result = database.SelectQuery(query.c_str());
 
-    if (messages.empty()) {
+    if (result.empty()) {
         response["error"] = "No messages found";
         return response;
     }
 
     response["success"] = true;
-    response["messages"] = messages;
+    response["messages"] = result;
 
     return response;
 }
 
-json create_message(ChatRoomDB &database, json fields) {
-    json response;
-    response["success"] = false;
+json delete_message(ChatRoomDB& database, json& fields) {
+    std::vector<std::string> required_fields = {"room_id", "created_at"};
 
-    if (!fields.contains("room_id") || !fields.contains("user_id") || !fields.contains("content")) {
-        json missing_fields = json::array();
-        if (!fields.contains("room_id")) missing_fields.push_back("room_id");
-        if (!fields.contains("user_id")) missing_fields.push_back("user_id");
-        if (!fields.contains("content")) missing_fields.push_back("content");
+    json response = check_fields(fields, required_fields);
 
-        response["error"] = "Missing required field(s)";
-        response["missing_fields"] = missing_fields;
+    if (!response.is_null()) {
         return response;
     }
 
-    std::string room_id = fields["room_id"];
-    std::string user_id = fields["user_id"];
-    std::string content = fields["content"];
+    response["success"] = false;
+    
+    const std::string room_id = fields["room_id"];
+    const std::string created_at = fields["created_at"];
 
-    std::string verify_room("SELECT COUNT(*) FROM chat.rooms WHERE room_id = " + room_id + " AND user_ids CONTAINS " + user_id + ";");
+    const std::string query("DELETE FROM chat.messages WHERE room_id = " + room_id + " AND created_at = " + created_at + ";");
 
-    json result = database.SelectQuery(verify_room.c_str());
+    if(database.ModifyQuery(query.c_str())) {
+        response["success"] = true;
+    }
 
-    if (!result[0].contains("count") || result[0]["count"] != 1) {
+    return response;
+}
+
+json create_message(ChatRoomDB& database, json& fields) {
+    std::vector<std::string> required_fields = {"room_id", "user_id", "content"};
+
+    json response = check_fields(fields, required_fields);
+
+    if (!response.is_null()) {
+        return response;
+    }
+
+    response["success"] = false;
+
+    const std::string room_id = fields["room_id"];
+    const std::string user_id = fields["user_id"];
+    const std::string content = fields["content"];
+
+    const std::string query_username("SELECT username FROM chat.users WHERE user_id = " + user_id + ";");
+
+    const json username_result = database.SelectQuery(query_username.c_str());
+
+    if (!username_result[0].contains("username")) {
+        response["error"] = "Could not fetch username";
+        return response;
+    }
+
+    const std::string username = username_result[0]["username"];
+
+    const std::string verify_room("SELECT COUNT(*) FROM chat.rooms WHERE room_id = " + room_id + " AND user_ids CONTAINS " + user_id + ";");
+
+    const json member_result = database.SelectQuery(verify_room.c_str());
+
+    if (!member_result[0].contains("count") || member_result[0]["count"] != 1) {
         response["error"] = "User is not a member of the room";
         return response;
     }
     
-    std::string add_message("INSERT INTO chat.messages (room_id, user_id, content, created_at) "
-            "VALUES (" + room_id + ", " + user_id + ", '" + content + "', now());");
+    const std::string add_message("INSERT INTO chat.messages (room_id, user_id, username, content, created_at) "
+            "VALUES (" + room_id + ", " + user_id + ", '" + username + "', '" + content + "', now());");
     
     if (database.ModifyQuery(add_message.c_str())) {
         response["success"] = true;

@@ -175,29 +175,31 @@ int main() {
     json fields;    
     json j;
 
-    //fields["name"] = "The Ark";
 
     //j = create_room(database, fields);
 
     //json fields["room_id"] = database.SelectQuery("SELECT room_id FROM chat.rooms WHERE name = 'The Ark';");
     
 
+    fields["name"] = "The Ark";
     fields["user_id"] = "18bb225d-2f55-4df6-b09d-7c4420d527f5";
     fields["room_id"] = "df5f37cb-de3a-4887-8cf3-abf6a882c088";
 
-    std::cout << remove_admin_from_user(database, fields).dump(3) << std::endl;
+    //std::cout << remove_admin_from_user(database, fields).dump(3) << std::endl;
 
     //std::cout << add_user_to_room(database, fields).dump(3) << std::endl;
     //std::cout << remove_user_from_room(database, fields).dump(3) << std::endl;
 
-    //fields["content"] = "YO?";
+    fields["content"] = "This is a test message!";
+    std::cout << create_message(database, fields).dump(3) << std::endl;
 
-    //std::cout << create_message(database, fields) << std::endl;
+    fields["content"] = "Hello world!";
+    std::cout << create_message(database, fields).dump(3) << std::endl;
 
-    //fields["min_date"] = "2025-02-15 00:00:00";
-    //fields["max_date"] = "2025-02-23 00:00:00";
+    fields["min_date"] = "2025-02-15 00:00:00";
+    fields["max_date"] = "2026-01-01 00:00:00";
 
-    //json message = get_messages(database, fields)["messages"];
+    std::cout << get_messages(database, fields)["messages"].dump(3) << std::endl;
     //fields["created_at"] = message["created_at"];
 
     //std::cout << delete_message(database, fields).dump(3) << std::endl;

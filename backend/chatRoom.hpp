@@ -119,13 +119,13 @@ json delete_room(ChatRoomDB& database, json& fields) {
 
     response["success"] = false;
 
-    const std::string name = fields["name"];
-    const std::string user_id = fields["user_id"];
+    const std::string room_id = fields["room_id"];
 
-    const std::string add_room("INSERT INTO chat.rooms (room_id, name, owner_id, admin_ids, user_ids, created_at) " 
-            "VALUES (uuid(), '" + name + "', " + user_id + ", {" + user_id + "}, {" + user_id + "}, toTimestamp(now()));");
+    // SHOULD PROBABLY VERIFY THAT USER IS OWNER HERE
 
-    if(database.ModifyQuery(add_room.c_str())) {
+    const std::string delete_room("DELETE FROM chat.rooms WHERE room_id = " + room_id + ";");
+
+    if(database.ModifyQuery(delete_room.c_str())) {
         response["success"] = true;
     }
 

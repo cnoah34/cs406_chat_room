@@ -1,15 +1,31 @@
+# Compiler flags
 CC=g++
 CFLAGS=-Wall -Wextra
-INCLUDE=-I./libraries/cpp-driver/include/ -I./libraries/nlohmann/ -I./libraries/libbcrypt/include/bcrypt/ -I./libraries/cpp-httplib/
-SCYLLA=./libraries/cpp-driver/build/libscylla-cpp-driver.so -Wl,-rpath,./libraries/cpp-driver/build/
-HEADERS=chatDB.hpp chatUser.hpp chatMessage.hpp chatRoom.hpp checkFields.hpp
+
+# Include directories
+INCLUDE=-I./include/cpp-driver/include/ \
+	-I./include/nlohmann/ \
+	-I./include/libbcrypt/include/bcrypt/ \
+	-I./include/cpp-httplib/ \
+	-I./database \
+	-I./api
+
+# ScyllaDB linking
+SCYLLA_LIB=./include/cpp-driver/build/libscylla-cpp-driver.so -Wl,-rpath,./include/cpp-driver/build/
+
+# bcrypt linking
+LIBS=-lbcrypt
+
+# Header files
+#HEADERS=./database/chatDB.hpp $(wildcard ./api/*.hpp)
 
 all: server
 
-server: server.cpp $(HEADERS)
-	$(CC) $(CFLAGS) $(INCLUDE) server.cpp \
-	$(SCYLLA) \
-	-lbcrypt -o server.out
+server: ./src/server.o #$(HEADERS)
+	$(CC) $(CFLAGS) $(INCLUDE) ./src/server.o $(SCYLLA_LIB) $(LIBS) -o server.out
+
+./src/server.o: ./src/server.cpp #$(HEADERS)
+	$(CC) $(CFLAGS) $(INCLUDE) -c ./src/server.cpp -o ./src/server.o
 
 clean:
-	rm -f server.out
+	rm -f server.out ./src/*.o

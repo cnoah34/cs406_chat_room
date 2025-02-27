@@ -40,7 +40,7 @@
                     { text: "At least one uppercase character", isValid: false },
                     { text: "At least one lowercase character", isValid: false },
                     { text: "At least one number", isValid: false },
-                    { text: "At least one special character (!@#$%^&*)", isValid: false },
+                    { text: "At least one special character (#?!@$%^&*-)", isValid: false },
                 ],
                 errorMessage: "",
                 successMessage: ""
@@ -55,13 +55,14 @@
                 this.passwordRequirements[1].isValid = /[A-Z]/.test(password)
                 this.passwordRequirements[2].isValid = /[a-z]/.test(password)
                 this.passwordRequirements[3].isValid = /\d/.test(password)
-                this.passwordRequirements[4].isValid = /[!@#$%^&*]/.test(password)
+                this.passwordRequirements[4].isValid = /[#?!@$%^&*-]/.test(password)
             },
 
             // Checks if the password meets all requirements
             validatePassword(password) {
                 // Min 8 characters, one uppercase, one lowercase, one number, one special character
-                const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/
+                const passwordRegex = /^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$/
+                                     
                 return passwordRegex.test(password)
             },
             
@@ -70,8 +71,7 @@
                 this.successMessage = ""
 
                 if (!this.validatePassword(this.formData.password)) {
-                    this.errorMessage = "Password must be at least 8 characters long, " +
-                        "contain at least one uppercase letter, one lowercase letter, one number, and one special character."
+                    this.errorMessage = "Password requirements not met"
                     return
                 }
 
@@ -79,7 +79,7 @@
                     const response = await axios.post("http://localhost:8080/users", this.formData)
 
                     console.log("User created: ", response.data)
-                    this.successMessage = "User successfully created!"
+                    this.successMessage = "User successfully created"
                     this.errorMessage = ""
                 }
                 catch (error) {
@@ -87,7 +87,7 @@
 
                     if (error.response) {
                         if (error.response.data.error && error.response.data.error.includes("already exists")) {
-                            this.errorMessage = "Username already exists, please choose a different one"
+                            this.errorMessage = "Username already exists"
                         }
                         else {
                             this.errorMessage = "An unexpected error occurred"

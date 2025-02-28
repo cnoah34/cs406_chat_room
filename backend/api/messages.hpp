@@ -3,10 +3,12 @@
 
 // Custom
 #include "chatDB.hpp"
-#include "checkFields.hpp"
+#include "commonFunctions.hpp"
+
+using json = nlohmann::json;
 
 
-void getMessages(httplib::Response& res, const std::string room_id, const std::string start_date, const std::string end_date, ChatRoomDB& database) {
+void getMessages(httplib::Response& res, ChatRoomDB& database, const std::string room_id, const std::string start_date, const std::string end_date) {
     if (room_id.empty() || start_date.empty() || end_date.empty()) {
         res.status = 400;
         res.set_content(R"({"error": "Missing required fields"})", "application/json");
@@ -100,6 +102,31 @@ void createMessage(const httplib::Request& req, httplib::Response& res, ChatRoom
     return;
 }
 
+void defineMessageMethods(httplib::Server& svr, ChatRoomDB& database) {
+    svr.Get("/messages", [&database](const httplib::Request& req, httplib::Response res) {
+        const std::string room_id = req.get_param_value("room_id");
+        const std::string start_date = req.get_param_value("start_date");
+        const std::string end_date = req.get_param_value("end_date");
+        
+        getMessages(res, database, room_id, start_date, end_date);
+        setCommonHeaders(res);
+    });
+
+    svr.Delete(R"(/messages/:room_id/:created_at)", [&database](const httplib::Request& req, httplib::Response& res) {
+        const std::string room_id = req.get_param_value("room_id");
+        const std::string created_at = req.get_param_value("created_at");
+
+        deleteMessage(res, database, room_id, created_at);
+        setCommonHeaders(res);
+    });
+    
+    svr.Post("/messages", [&database](const httplib::Request& req, httplib::Response& res) {
+        createMessage(req, res, database);
+        setCommonHeaders(res);
+    });
+
+    return;
+}
 
 #endif
 

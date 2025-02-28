@@ -3,7 +3,9 @@
 
 // Custom
 #include "chatDB.hpp"
-#include "checkFields.hpp"
+#include "commonFunctions.hpp"
+
+using json = nlohmann::json;
 
 
 void getUserDetails(httplib::Response& res, ChatRoomDB& database, const std::string user_id) {
@@ -150,6 +152,33 @@ void createUser(const httplib::Request& req, httplib::Response& res, ChatRoomDB&
     return;
 }
 
+void defineUserMethods(httplib::Server& svr, ChatRoomDB& database) {
+    svr.Get("/users/:user_id", [&database](const httplib::Request& req, httplib::Response& res) {
+        const std::string user_id = req.matches[1];
+
+        getUserDetails(res, database, user_id);
+        setCommonHeaders(res);
+    });
+
+    svr.Post("/users", [&database](const httplib::Request& req, httplib::Response& res) {
+        createUser(req, res, database);
+        setCommonHeaders(res);
+    });
+
+    svr.Post("/login", [&database](const httplib::Request& req, httplib::Response& res) {
+        verifyUser(req, res, database);
+        setCommonHeaders(res);
+    });
+
+    svr.Delete("/users/:user_id", [&database](const httplib::Request& req, httplib::Response& res) {
+        const std::string user_id = req.matches[1];
+
+        deleteUser(res, database, user_id);
+        setCommonHeaders(res);
+    });
+
+    return;
+}
 
 #endif
 

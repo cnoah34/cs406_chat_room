@@ -8,6 +8,14 @@
 #include <httplib.h>
 
 
+void setCommonHeaders(httplib::Response& res) {
+    res.set_header("Access-Control-Allow-Origin", "*");
+    res.set_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.set_header("Access-Control-Allow-Headers", "Content-Type");
+
+    return;
+}
+
 bool checkFields(const httplib::Request& req, httplib::Response& res, const std::vector<std::string>& required_fields) {
     json requestBody = json::parse(req.body);
     json missing_fields = json::array();

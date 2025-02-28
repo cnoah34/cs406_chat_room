@@ -20,7 +20,6 @@
 #include <users.hpp>
 #include <messages.hpp>
 #include <rooms.hpp>
-#include <chatAPI.hpp>
 
 #define PORT 8080
 #define DATABASE_IP "172.19.0.2"
@@ -32,7 +31,14 @@ int main() {
 
     ChatRoomDB database(DATABASE_IP);
 
-    defineMethods(svr, database);
+    svr.Options(R"(/.*)", [](const httplib::Request&, httplib::Response& res) {
+        setCommonHeaders(res);
+        res.status = 204;
+    });
+
+    defineUserMethods(svr, database);
+    defineMessageMethods(svr, database);
+    defineRoomMethods(svr, database);
 
     svr.listen("0.0.0.0", PORT);
 

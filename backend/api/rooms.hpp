@@ -2,8 +2,8 @@
 #define CHATROOM_HPP_INCLUDED
 
 // Custom
-#include "chatDB.hpp"
-#include "checkFields.hpp"
+#include <chatDB.hpp>
+#include <commonFunctions.hpp>
 
 
 void removeAdmin(const httplib::Request& req, httplib::Response& res, ChatRoomDB& database) {
@@ -28,7 +28,7 @@ void removeAdmin(const httplib::Request& req, httplib::Response& res, ChatRoomDB
     return;
 }
 
-void makeAdmin(const httplib::Request& req, httplib::Response& res, ChatRoomDB& database) {
+void makeUserAdmin(const httplib::Request& req, httplib::Response& res, ChatRoomDB& database) {
     if (!checkFields(req, res, {"room_id", "user_id"})) {
         return;
     }
@@ -144,6 +144,48 @@ void createRoom(const httplib::Request& req, httplib::Response& res, ChatRoomDB 
     }
 
     res.status = 204;
+    return;
+}
+
+void defineRoomMethods(httplib::Server& svr, ChatRoomDB& database) {
+    // Remove admin
+    svr.Patch("/rooms/remove_admin", [&database](const httplib::Request& req, httplib::Response& res) {
+        removeAdmin(req, res, database);
+        setCommonHeaders(res);
+    });
+
+    // Make user admin
+    svr.Patch("/rooms/make_admin", [&database](const httplib::Request& req, httplib::Response& res) {
+        makeUserAdmin(req, res, database);
+        setCommonHeaders(res);
+    });
+
+    // Remove user from room
+    svr.Patch("/rooms/remove_user", [&database](const httplib::Request& req, httplib::Response& res) {
+        removeUserFromRoom(req, res, database);
+        setCommonHeaders(res);
+    });
+
+    // Add user to room
+    svr.Patch("/rooms/add_user", [&database](const httplib::Request& req, httplib::Response& res) {
+        addUserToRoom(req, res, database);
+        setCommonHeaders(res);
+    });
+
+    // Delete room
+    svr.Delete("/rooms/:room_id", [&database](const httplib::Request& req, httplib::Response& res) {
+        const std::string room_id = req.matches[1];
+
+        deleteRoom(res, database, room_id);
+        setCommonHeaders(res);
+    });
+
+    // Create room
+    svr.Post("/rooms", [&database](const httplib::Request& req, httplib::Response& res) {
+        createRoom(req, res, database);
+        setCommonHeaders(res);
+    });
+    
     return;
 }
 

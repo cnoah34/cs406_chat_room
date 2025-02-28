@@ -6,94 +6,145 @@
 #include "checkFields.hpp"
 
 
-json remove_admin_from_user(ChatRoomDB& database, json& fields) {
-    const std::string room_id = fields["room_id"];
-    const std::string user_id = fields["user_id"];
-
-    const std::string remove_admin("UPDATE chat.rooms SET admin_ids = admin_ids - {" + user_id + "} WHERE room_id = " + room_id + ";");
-
-    if (!database.ModifyQuery(remove_admin.c_str())) {
-        return {{"error", "Could not remove admin status from user"}};
+void removeAdmin(const httplib::Request& req, httplib::Response& res, ChatRoomDB& database) {
+    if (!checkFields(req, res, {"room_id", "user_id"})) {
+        return;
     }
 
-    return {};
-}
+    json body = json::parse(req.body);
 
-json make_user_admin(ChatRoomDB& database, json& fields) {
-    const std::string room_id = fields["room_id"];
-    const std::string user_id = fields["user_id"];
-    
-    const std::string make_admin("UPDATE chat.rooms SET admin_ids = admin_ids + {" + user_id + "} WHERE room_id = " + room_id + ";");
+    const std::string room_id = body["room_id"];
+    const std::string user_id = body["user_id"];
 
-    if (!database.ModifyQuery(make_admin.c_str())) {
-        return {{"error", "Could not make user an admin"}};
+    const std::string remove_admin("UPDATE chat.rooms SET admin_ids = admin_ids - {?} WHERE room_id = ?;");
+
+    if (!database.ModifyQuery(remove_admin.c_str(), {user_id, room_id})) {
+        res.status = 500;
+        res.set_content(R"({"error": "Internal server error"})", "application/json");
+        return;
     }
 
-    return {};
+    res.status = 204;
+    return;
 }
 
-json remove_user_from_room(ChatRoomDB& database, json& fields) {
-    const std::string room_id = fields["room_id"];
-    const std::string user_id = fields["user_id"];
+void makeAdmin(const httplib::Request& req, httplib::Response& res, ChatRoomDB& database) {
+    if (!checkFields(req, res, {"room_id", "user_id"})) {
+        return;
+    }
+
+    json body = json::parse(req.body);
+
+    const std::string room_id = body["room_id"];
+    const std::string user_id = body["user_id"];
+
+    const std::string make_admin("UPDATE chat.rooms SET admin_ids = admin_ids + {?} WHERE room_id = ?;");
+
+    if (!database.ModifyQuery(make_admin.c_str(), {user_id, room_id})) {
+        res.status = 500;
+        res.set_content(R"({"error": "Internal server error"})", "application/json");
+        return;
+    }
+
+    res.status = 204;
+    return;
+}
+
+void removeUserFromRoom(const httplib::Request& req, httplib::Response& res, ChatRoomDB& database) {
+    if (!checkFields(req, res, {"room_id", "user_id"})) {
+        return;
+    }
+
+    json body = json::parse(req.body);
+
+    const std::string room_id = body["room_id"];
+    const std::string user_id = body["user_id"];
 
     const std::string batch_update = 
             "BEGIN BATCH "
-            "UPDATE chat.rooms SET user_ids = user_ids - {" + user_id + "} WHERE room_id = " + room_id + "; "
-            "UPDATE chat.rooms SET admin_ids = admin_ids - {" + user_id + "} WHERE room_id = " + room_id + "; "
-            "UPDATE chat.users SET room_ids = room_ids - {" + room_id + "} WHERE user_id = " + user_id + "; "
+            "UPDATE chat.rooms SET user_ids = user_ids - {?} WHERE room_id = ?; "
+            "UPDATE chat.rooms SET admin_ids = admin_ids - {?} WHERE room_id = ?; "
+            "UPDATE chat.users SET room_ids = room_ids - {?} WHERE user_id = ?; "
             "APPLY BATCH;";
 
-    if(!database.ModifyQuery(batch_update.c_str())) {
-        return {{"error", "Could not remove user from the room"}};
+    if(!database.ModifyQuery(batch_update.c_str(), {user_id, room_id, user_id, room_id, room_id, user_id})) {
+        res.status = 500;
+        res.set_content(R"({"error": "Internal server error"})", "application/json");
+        return;
     }
 
-    return {};
+    res.status = 204;
+    return;
 }
 
-json add_user_to_room(ChatRoomDB& database, json& fields) {
-    const std::string room_id = fields["room_id"];
-    const std::string user_id = fields["user_id"];
+void addUserToRoom(const httplib::Request& req, httplib::Response& res, ChatRoomDB& database) {
+    if (!checkFields(req, res, {"room_id", "user_id"})) {
+        return;
+    }
+
+    json body = json::parse(req.body);
+
+    const std::string room_id = body["room_id"];
+    const std::string user_id = body["user_id"];
 
     const std::string batch_update = 
             "BEGIN BATCH "
-            "UPDATE chat.rooms SET user_ids = user_ids + {" + user_id + "} WHERE room_id = " + room_id + "; "
-            "UPDATE chat.users SET room_ids = room_ids + {" + room_id + "} WHERE user_id = " + user_id + "; "
+            "UPDATE chat.rooms SET user_ids = user_ids + {?} WHERE room_id = ?; "
+            "UPDATE chat.users SET room_ids = room_ids + {?} WHERE user_id = ?; "
             "APPLY BATCH;";
 
-    if (!database.ModifyQuery(batch_update.c_str())) {
-        return {{"error", "Could not add user to the room"}};
+    if (!database.ModifyQuery(batch_update.c_str(), {user_id, room_id, room_id, user_id})) {
+        res.status = 500;
+        res.set_content(R"({"error": "Internal server error"})", "application/json");
+        return;
     }
 
 
-    return {};
+    res.status = 204;
+    return;
 }
 
-json delete_room(ChatRoomDB& database, json& fields) {
-    const std::string room_id = fields["room_id"];
+void deleteRoom(httplib::Response& res, ChatRoomDB& database, const std::string room_id) {
+    if (room_id.empty()) {
+        res.status = 400;
+        res.set_content(R"({"error": "Missing room ID"})", "application/json");
+        return;
+    }
 
     // SHOULD PROBABLY VERIFY THAT USER IS OWNER HERE
 
-    const std::string delete_room("DELETE FROM chat.rooms WHERE room_id = " + room_id + ";");
+    const std::string delete_room("DELETE FROM chat.rooms WHERE room_id = ?;");
 
-    if (!database.ModifyQuery(delete_room.c_str())) {
-        return {{"error", "Could not delete the room"}};
+    if (!database.ModifyQuery(delete_room.c_str(), {room_id})) {
+        res.status = 500;
+        res.set_content(R"({"error": "Internal server error"})", "application/json");
+        return;
     }
 
-    return {};
+    res.status = 204;
+    return;
 }
 
-json create_room(ChatRoomDB &database, json& fields) {
-    const std::string name = fields["name"];
-    const std::string user_id = fields["user_id"];
-
-    const std::string add_room("INSERT INTO chat.rooms (room_id, name, owner_id, admin_ids, user_ids, created_at) " 
-            "VALUES (uuid(), '" + name + "', " + user_id + ", {" + user_id + "}, {" + user_id + "}, toTimestamp(now()));");
-
-    if (!database.ModifyQuery(add_room.c_str())) {
-        return {{"error", "Could not create the room"}};
+void createRoom(const httplib::Request& req, httplib::Response& res, ChatRoomDB &database) {
+    if (!checkFields(req, res, {"name", "user_id"})) {
+        return;
     }
 
-    return {};
+    const json body = json::parse(req.body);
+    const std::string name = body["name"];
+    const std::string user_id = body["user_id"];
+
+    const std::string add_room("INSERT INTO chat.rooms (room_id, name, owner_id, admin_ids, user_ids, created_at) " 
+            "VALUES (uuid(), '?', ?, {?}, {?}, toTimestamp(now()));");
+
+    if (!database.ModifyQuery(add_room.c_str(), {name, user_id, user_id, user_id})) {
+        res.status = 500;
+        res.set_content(R"({"error": "Internal server error"})", "application/json");
+        return;
+    }
+
+    res.status = 204;
+    return;
 }
 
 

@@ -133,8 +133,8 @@ class ChatRoomDB {
     public:
         ChatRoomDB(const char* ip);
         ~ChatRoomDB();
-        json SelectQuery(const char* query);
-        bool ModifyQuery(const char* query);
+        json SelectQuery(const char* query, const std::vector<std::string>& params);
+        bool ModifyQuery(const char* query, const std::vector<std::string>& params);
 
     private:
         // Allocate the objects that represent cluster and session. Remember to free them once no longer needed!
@@ -171,8 +171,13 @@ ChatRoomDB::~ChatRoomDB() {
     cass_session_free(session);
 }
 
-json ChatRoomDB::SelectQuery(const char* query) {
-    CassStatement* statement = cass_statement_new(query, 0);
+json ChatRoomDB::SelectQuery(const char* query, const std::vector<std::string>& params) {
+    CassStatement* statement = cass_statement_new(query, params.size());
+
+    for (size_t i = 0; i < params.size(); i++) {
+        cass_statement_bind_string(statement, i, params[i].c_str());
+    }
+
     CassFuture* result_future = cass_session_execute(session, statement);
     cass_statement_free(statement);
 
@@ -193,8 +198,13 @@ json ChatRoomDB::SelectQuery(const char* query) {
     return json_result;
 }
 
-bool ChatRoomDB::ModifyQuery(const char* query) {
-    CassStatement* statement = cass_statement_new(query, 0);
+bool ChatRoomDB::ModifyQuery(const char* query, const std::vector<std::string>& params) {
+    CassStatement* statement = cass_statement_new(query, params.size());
+
+    for (size_t i = 0; i < params.size(); i++) {
+        cass_statement_bind_string(statement, i, params[i].c_str());
+    }
+
     CassFuture* result_future = cass_session_execute(session, statement);
     cass_statement_free(statement);
 

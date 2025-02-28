@@ -39,9 +39,23 @@ void deleteMessage(httplib::Response& res, ChatRoomDB& database, const std::stri
         return;
     }
 
-    const std::string query("DELETE FROM chat.messages WHERE room_id = ? AND created_at = ?;");
+    CassUuid room_uuid;
+    CassUuid created_at_uuid;
 
-    if(!database.ModifyQuery(query.c_str(), {room_id, created_at})) {
+    if (cass_uuid_from_string(room_id.c_str(), &room_uuid) != CASS_OK ||
+        cass_uuid_from_string(created_at.c_str(), &created_at_uuid) != CASS_OK) {
+        res.status = 400;
+        res.set_content(R"({"error": "Invalid parameter format"})", "application/json");
+        return;
+    }
+
+    const char* query = "DELETE FROM chat.messages WHERE room_id = ? AND created_at = ?;";
+
+    CassStatement* statement = cass_statement_new(query, 2);
+    cass_statement_bind_uuid(statement, 0, room_uuid);
+    cass_statement_bind_uuid(statement, 1, created_at_uuid);
+
+    if (!database.ModifyQuery(statement)) {
         res.status = 500;
         res.set_content(R"({"error", "Could not delete message"})", "application/json");
         return;
@@ -75,7 +89,6 @@ void createMessage(const httplib::Request& req, httplib::Response& res, ChatRoom
     const std::string username = username_result[0]["username"];
 
     const std::string verify_room("SELECT COUNT(*) FROM chat.rooms WHERE room_id = ? AND user_ids CONTAINS ?;");
-
     const json member_result = database.SelectQuery(verify_room.c_str(), {room_id, user_id});
 
     if (!member_result[0].contains("count")) {
@@ -89,10 +102,26 @@ void createMessage(const httplib::Request& req, httplib::Response& res, ChatRoom
         return;
 
     }
+
+    CassUuid room_uuid;
+    CassUuid user_uuid;
+
+    if (cass_uuid_from_string(room_id.c_str(), &room_uuid) != CASS_OK ||
+        cass_uuid_from_string(user_id.c_str(), &user_uuid) != CASS_OK) {
+        res.status = 400;
+        res.set_content(R"({"error": "Invalid parameter format"})", "application/json");
+        return;
+    }
     
-    const std::string add_message("INSERT INTO chat.messages (room_id, user_id, username, content, created_at) VALUES (?, ?, ?, ?, now());");
+    const char* add_message = "INSERT INTO chat.messages (room_id, user_id, username, content, created_at) VALUES (?, ?, ?, ?, now());";
     
-    if (!database.ModifyQuery(add_message.c_str(), {room_id, user_id, username, content})) {
+    CassStatement* statement = cass_statement_new(add_message, 4);
+    cass_statement_bind_uuid(statement, 0, room_uuid);
+    cass_statement_bind_uuid(statement, 1, user_uuid);
+    cass_statement_bind_string(statement, 2, username.c_str());
+    cass_statement_bind_string(statement, 3, content.c_str());
+
+    if (!database.ModifyQuery(statement)) {
         res.status = 500;
         res.set_content(R"({"error": "Internal server error"})", "application/json");
         return;

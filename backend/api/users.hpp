@@ -83,14 +83,24 @@ void deleteUser(httplib::Response& res, ChatRoomDB& database, const std::string 
         return;
     }
 
-    const std::string query("DELETE FROM chat.users WHERE user_id = ?;");
+    CassUuid user_uuid;
 
-    if(!database.ModifyQuery(query.c_str(), {user_id})) {
+    if (cass_uuid_from_string(user_id.c_str(), &user_uuid) != CASS_OK) {
+        res.status = 400;
+        res.set_content(R"({"error": "Invalid user ID format"})", "application/json");
+        return;
+    }
+
+    const char* query = "DELETE FROM chat.users WHERE user_id = ?;";
+    CassStatement* statement = cass_statement_new(query, 1);
+    cass_statement_bind_uuid(statement, 0, user_uuid);
+
+    if (!database.ModifyQuery(statement)) {
         res.status = 500;
         res.set_content(R"({"error": "Internal server error"})", "application/json");
         return;
     }
-    
+
     res.status = 204;
     return;
 }
@@ -136,13 +146,18 @@ void createUser(const httplib::Request& req, httplib::Response& res, ChatRoomDB&
         return;
     }
 
-    const std::string hashed_pw(hash);
+    //const std::string hashed_pw(hash);
 
-    const std::string insert_query = 
+    const char* insert_query = 
         "INSERT INTO chat.users (user_id, created_at, username, password, salt) "
         "VALUES (uuid(), toTimestamp(now()), ?, ?, ?);";
 
-    if (!database.ModifyQuery(insert_query.c_str(), {username, hashed_pw, salt})) {
+    CassStatement* statement = cass_statement_new(insert_query, 3);
+    cass_statement_bind_string(statement, 0, username.c_str());
+    cass_statement_bind_string(statement, 1, hash);
+    cass_statement_bind_string(statement, 2, salt);
+
+    if (!database.ModifyQuery(statement)) {
         res.status = 500;
         res.set_content(R"({"error": "Internal server error"})", "application/json");
         return;
@@ -171,7 +186,7 @@ void defineUserMethods(httplib::Server& svr, ChatRoomDB& database) {
     });
 
     svr.Delete("/users/:user_id", [&database](const httplib::Request& req, httplib::Response& res) {
-        const std::string user_id = req.matches[1];
+        const std::string user_id = req.path_params.at("user_id");
 
         deleteUser(res, database, user_id);
         setCommonHeaders(res);
@@ -179,6 +194,7 @@ void defineUserMethods(httplib::Server& svr, ChatRoomDB& database) {
 
     return;
 }
+
 
 #endif
 

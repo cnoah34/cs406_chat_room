@@ -12,13 +12,26 @@ void removeAdmin(const httplib::Request& req, httplib::Response& res, ChatRoomDB
     }
 
     json body = json::parse(req.body);
-
     const std::string room_id = body["room_id"];
     const std::string user_id = body["user_id"];
 
-    const std::string remove_admin("UPDATE chat.rooms SET admin_ids = admin_ids - {?} WHERE room_id = ?;");
+    CassUuid room_uuid;
+    CassUuid user_uuid;
 
-    if (!database.ModifyQuery(remove_admin.c_str(), {user_id, room_id})) {
+    if (cass_uuid_from_string(room_id.c_str(), &room_uuid) != CASS_OK ||
+        cass_uuid_from_string(room_id.c_str(), &user_uuid) != CASS_OK) {
+        res.status = 400;
+        res.set_content(R"({"error": "Invalid parameter format"})", "application/json");
+        return;
+    }
+
+    const char* query = "UPDATE chat.rooms SET admin_ids = admin_ids - {?} WHERE room_id = ?;";
+
+    CassStatement* statement = cass_statement_new(query, 2);
+    cass_statement_bind_uuid(statement, 0, user_uuid);
+    cass_statement_bind_uuid(statement, 1, room_uuid);
+
+    if (!database.ModifyQuery(statement)) {
         res.status = 500;
         res.set_content(R"({"error": "Internal server error"})", "application/json");
         return;
@@ -34,13 +47,26 @@ void makeUserAdmin(const httplib::Request& req, httplib::Response& res, ChatRoom
     }
 
     json body = json::parse(req.body);
-
     const std::string room_id = body["room_id"];
     const std::string user_id = body["user_id"];
 
-    const std::string make_admin("UPDATE chat.rooms SET admin_ids = admin_ids + {?} WHERE room_id = ?;");
+    CassUuid room_uuid;
+    CassUuid user_uuid;
 
-    if (!database.ModifyQuery(make_admin.c_str(), {user_id, room_id})) {
+    if (cass_uuid_from_string(room_id.c_str(), &room_uuid) != CASS_OK ||
+        cass_uuid_from_string(user_id.c_str(), &user_uuid) != CASS_OK) {
+        res.status = 400;
+        res.set_content(R"({"error": "Invalid parameter format"})", "application/json");
+        return;
+    }
+
+    const char* query = "UPDATE chat.rooms SET admin_ids = admin_ids + {?} WHERE room_id = ?;";
+
+    CassStatement* statement = cass_statement_new(query, 2);
+    cass_statement_bind_uuid(statement, 0, user_uuid);
+    cass_statement_bind_uuid(statement, 1, room_uuid);
+
+    if (!database.ModifyQuery(statement)) {
         res.status = 500;
         res.set_content(R"({"error": "Internal server error"})", "application/json");
         return;
@@ -56,18 +82,35 @@ void removeUserFromRoom(const httplib::Request& req, httplib::Response& res, Cha
     }
 
     json body = json::parse(req.body);
-
     const std::string room_id = body["room_id"];
     const std::string user_id = body["user_id"];
 
-    const std::string batch_update = 
+    CassUuid room_uuid;
+    CassUuid user_uuid;
+
+    if (cass_uuid_from_string(room_id.c_str(), &room_uuid) != CASS_OK ||
+        cass_uuid_from_string(user_id.c_str(), &user_uuid) != CASS_OK) {
+        res.status = 400;
+        res.set_content(R"({"error": "Invalid parameter format"})", "application/json");
+        return;
+    }
+
+    const char* query = 
             "BEGIN BATCH "
             "UPDATE chat.rooms SET user_ids = user_ids - {?} WHERE room_id = ?; "
             "UPDATE chat.rooms SET admin_ids = admin_ids - {?} WHERE room_id = ?; "
             "UPDATE chat.users SET room_ids = room_ids - {?} WHERE user_id = ?; "
             "APPLY BATCH;";
 
-    if(!database.ModifyQuery(batch_update.c_str(), {user_id, room_id, user_id, room_id, room_id, user_id})) {
+    CassStatement* statement = cass_statement_new(query, 6);
+    cass_statement_bind_uuid(statement, 0, user_uuid);
+    cass_statement_bind_uuid(statement, 1, room_uuid);
+    cass_statement_bind_uuid(statement, 2, user_uuid);
+    cass_statement_bind_uuid(statement, 3, room_uuid);
+    cass_statement_bind_uuid(statement, 4, room_uuid);
+    cass_statement_bind_uuid(statement, 5, user_uuid);
+
+    if (!database.ModifyQuery(statement)) {
         res.status = 500;
         res.set_content(R"({"error": "Internal server error"})", "application/json");
         return;
@@ -83,17 +126,32 @@ void addUserToRoom(const httplib::Request& req, httplib::Response& res, ChatRoom
     }
 
     json body = json::parse(req.body);
-
     const std::string room_id = body["room_id"];
     const std::string user_id = body["user_id"];
 
-    const std::string batch_update = 
+    CassUuid room_uuid;
+    CassUuid user_uuid;
+
+    if (cass_uuid_from_string(room_id.c_str(), &room_uuid) != CASS_OK ||
+        cass_uuid_from_string(user_id.c_str(), &user_uuid) != CASS_OK) {
+        res.status = 400;
+        res.set_content(R"({"error": "Invalid parameter format"})", "application/json");
+        return;
+    }
+
+    const char* query = 
             "BEGIN BATCH "
             "UPDATE chat.rooms SET user_ids = user_ids + {?} WHERE room_id = ?; "
             "UPDATE chat.users SET room_ids = room_ids + {?} WHERE user_id = ?; "
             "APPLY BATCH;";
 
-    if (!database.ModifyQuery(batch_update.c_str(), {user_id, room_id, room_id, user_id})) {
+    CassStatement* statement = cass_statement_new(query, 4);
+    cass_statement_bind_uuid(statement, 0, user_uuid);
+    cass_statement_bind_uuid(statement, 1, room_uuid);
+    cass_statement_bind_uuid(statement, 2, room_uuid);
+    cass_statement_bind_uuid(statement, 3, user_uuid);
+
+    if (!database.ModifyQuery(statement)) {
         res.status = 500;
         res.set_content(R"({"error": "Internal server error"})", "application/json");
         return;
@@ -111,11 +169,22 @@ void deleteRoom(httplib::Response& res, ChatRoomDB& database, const std::string 
         return;
     }
 
-    // SHOULD PROBABLY VERIFY THAT USER IS OWNER HERE
+    // SHOULD PROBABLY VERIFY THAT USER IS OWNER
 
-    const std::string delete_room("DELETE FROM chat.rooms WHERE room_id = ?;");
+    CassUuid room_uuid;
 
-    if (!database.ModifyQuery(delete_room.c_str(), {room_id})) {
+    if (cass_uuid_from_string(room_id.c_str(), &room_uuid) != CASS_OK) {
+        res.status = 400;
+        res.set_content(R"({"error": "Invalid parameter format"})", "application/json");
+        return;
+    }
+
+    const char* query = "DELETE FROM chat.rooms WHERE room_id = ?;";
+
+    CassStatement* statement = cass_statement_new(query, 1);
+    cass_statement_bind_uuid(statement, 0, room_uuid);
+
+    if (!database.ModifyQuery(statement)) {
         res.status = 500;
         res.set_content(R"({"error": "Internal server error"})", "application/json");
         return;
@@ -131,13 +200,27 @@ void createRoom(const httplib::Request& req, httplib::Response& res, ChatRoomDB 
     }
 
     const json body = json::parse(req.body);
-    const std::string name = body["name"];
     const std::string user_id = body["user_id"];
+    const std::string name = body["name"];
 
-    const std::string add_room("INSERT INTO chat.rooms (room_id, name, owner_id, admin_ids, user_ids, created_at) " 
-            "VALUES (uuid(), '?', ?, {?}, {?}, toTimestamp(now()));");
+    CassUuid user_uuid;
 
-    if (!database.ModifyQuery(add_room.c_str(), {name, user_id, user_id, user_id})) {
+    if (cass_uuid_from_string(user_id.c_str(), &user_uuid) != CASS_OK) {
+        res.status = 400;
+        res.set_content(R"({"error": "Invalid parameter format"})", "application/json");
+        return;
+    }
+
+    const char* query = "INSERT INTO chat.rooms (room_id, name, owner_id, admin_ids, user_ids, created_at) " 
+            "VALUES (uuid(), '?', ?, {?}, {?}, toTimestamp(now()));";
+
+    CassStatement* statement = cass_statement_new(query, 4);
+    cass_statement_bind_string(statement, 0, name.c_str());
+    cass_statement_bind_uuid(statement, 1, user_uuid);
+    cass_statement_bind_uuid(statement, 2, user_uuid);
+    cass_statement_bind_uuid(statement, 3, user_uuid);
+
+    if (!database.ModifyQuery(statement)) {
         res.status = 500;
         res.set_content(R"({"error": "Internal server error"})", "application/json");
         return;

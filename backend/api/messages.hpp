@@ -15,11 +15,28 @@ void getMessages(httplib::Response& res, ChatRoomDB& database, const std::string
         return;
     }
 
-    const std::string query("SELECT user_id, content, created_at FROM chat.messages "
+    CassUuid room_uuid;
+    CassUuid start_uuid;
+    CassUuid end_uuid;
+
+    if (cass_uuid_from_string(room_id.c_str(), &room_uuid) != CASS_OK ||
+        cass_uuid_from_string(start_date.c_str(), &start_uuid) != CASS_OK ||
+        cass_uuid_from_string(end_date.c_str(), &end_uuid) != CASS_OK) {
+        res.status = 400;
+        res.set_content(R"({"error": "Invalid parameter format"})", "application/json");
+        return;
+    }
+
+    const char* query("SELECT user_id, content, created_at FROM chat.messages "
             "WHERE room_id = ? AND created_at >= minTimeuuid(?) "
             "AND created_at <= maxTimeuuid(?);");
 
-    const json result = database.SelectQuery(query.c_str(), {room_id, start_date, end_date});
+    CassStatement* statement = cass_statement_new(query, 3);
+    cass_statement_bind_uuid(statement, 0, room_uuid);
+    cass_statement_bind_uuid(statement, 1, start_uuid);
+    cass_statement_bind_uuid(statement, 2, end_uuid);
+
+    const json result = database.SelectQuery(statement);
 
     if (result.empty()) {
         res.status = 404;
@@ -76,9 +93,22 @@ void createMessage(const httplib::Request& req, httplib::Response& res, ChatRoom
     const std::string user_id = body["user_id"];
     const std::string content = body["content"];
 
-    const std::string query_username("SELECT username FROM chat.users WHERE user_id = ?;");
+    CassUuid room_uuid;
+    CassUuid user_uuid;
 
-    const json username_result = database.SelectQuery(query_username.c_str(), {user_id});
+    if (cass_uuid_from_string(room_id.c_str(), &room_uuid) != CASS_OK ||
+        cass_uuid_from_string(user_id.c_str(), &user_uuid) != CASS_OK) {
+        res.status = 400;
+        res.set_content(R"({"error": "Invalid parameter format"})", "application/json");
+        return;
+    }
+
+    const char* select_username = "SELECT username FROM chat.users WHERE user_id = ?;";
+
+    CassStatement* username_statement = cass_statement_new(select_username, 1);
+    cass_statement_bind_uuid(username_statement, 0, user_uuid);
+
+    const json username_result = database.SelectQuery(username_statement);
 
     if (!username_result[0].contains("username")) {
         res.status = 500;
@@ -88,8 +118,13 @@ void createMessage(const httplib::Request& req, httplib::Response& res, ChatRoom
 
     const std::string username = username_result[0]["username"];
 
-    const std::string verify_room("SELECT COUNT(*) FROM chat.rooms WHERE room_id = ? AND user_ids CONTAINS ?;");
-    const json member_result = database.SelectQuery(verify_room.c_str(), {room_id, user_id});
+    const char* verify_query = "SELECT COUNT(*) FROM chat.rooms WHERE room_id = ? AND user_ids CONTAINS ?;";
+
+    CassStatement* verify_statement = cass_statement_new(verify_query, 2);
+    cass_statement_bind_uuid(verify_statement, 0, room_uuid);
+    cass_statement_bind_uuid(verify_statement, 0, user_uuid);
+
+    const json member_result = database.SelectQuery(verify_statement);
 
     if (!member_result[0].contains("count")) {
         res.status = 500;
@@ -103,25 +138,15 @@ void createMessage(const httplib::Request& req, httplib::Response& res, ChatRoom
 
     }
 
-    CassUuid room_uuid;
-    CassUuid user_uuid;
-
-    if (cass_uuid_from_string(room_id.c_str(), &room_uuid) != CASS_OK ||
-        cass_uuid_from_string(user_id.c_str(), &user_uuid) != CASS_OK) {
-        res.status = 400;
-        res.set_content(R"({"error": "Invalid parameter format"})", "application/json");
-        return;
-    }
-    
     const char* add_message = "INSERT INTO chat.messages (room_id, user_id, username, content, created_at) VALUES (?, ?, ?, ?, now());";
     
-    CassStatement* statement = cass_statement_new(add_message, 4);
-    cass_statement_bind_uuid(statement, 0, room_uuid);
-    cass_statement_bind_uuid(statement, 1, user_uuid);
-    cass_statement_bind_string(statement, 2, username.c_str());
-    cass_statement_bind_string(statement, 3, content.c_str());
+    CassStatement* insert_statement = cass_statement_new(add_message, 4);
+    cass_statement_bind_uuid(insert_statement, 0, room_uuid);
+    cass_statement_bind_uuid(insert_statement, 1, user_uuid);
+    cass_statement_bind_string(insert_statement, 2, username.c_str());
+    cass_statement_bind_string(insert_statement, 3, content.c_str());
 
-    if (!database.ModifyQuery(statement)) {
+    if (!database.ModifyQuery(insert_statement)) {
         res.status = 500;
         res.set_content(R"({"error": "Internal server error"})", "application/json");
         return;

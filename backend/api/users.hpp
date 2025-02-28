@@ -15,8 +15,20 @@ void getUserDetails(httplib::Response& res, ChatRoomDB& database, const std::str
         return;
     }
 
-    const std::string query = "SELECT username, room_ids, created_at FROM chat.users WHERE user_id = ?;"; 
-    const json result = database.SelectQuery(query.c_str(), {user_id});
+    CassUuid user_uuid;
+
+    if (cass_uuid_from_string(user_id.c_str(), &user_uuid) != CASS_OK) {
+        res.status = 400;
+        res.set_content(R"({"error": "Invalid parameter format"})", "application/json");
+        return;
+    }
+
+    const char* query = "SELECT username, room_ids, created_at FROM chat.users WHERE user_id = ?;"; 
+
+    CassStatement* statement = cass_statement_new(query, 1);
+    cass_statement_bind_uuid(statement, 0, user_uuid);
+
+    const json result = database.SelectQuery(statement);
 
     if (result.empty()) {
         res.status = 404;
@@ -39,9 +51,11 @@ void verifyUser(const httplib::Request& req, httplib::Response& res, ChatRoomDB&
     const std::string username = body["username"];
     const std::string provided_password = body["password"];
 
-    const std::string query = "SELECT password, salt FROM chat.users WHERE username = ?;";
+    const char* query = "SELECT password, salt FROM chat.users WHERE username = ?;";
+    CassStatement* statement = cass_statement_new(query, 1);
+    cass_statement_bind_string(statement, 0, username.c_str());
 
-    const json result = database.SelectQuery(query.c_str(), {username});
+    const json result = database.SelectQuery(statement);
 
     if (result.empty() || !result[0].contains("password") || !result[0].contains("salt")) {
         res.status = 500;
@@ -114,8 +128,12 @@ void createUser(const httplib::Request& req, httplib::Response& res, ChatRoomDB&
     const std::string username = body["username"];
     const std::string password = body["password"];
 
-    const std::string query = "SELECT COUNT(*) FROM chat.users WHERE username = ?;"; 
-    const json result = database.SelectQuery(query.c_str(), {username});
+    const char* select_query = "SELECT COUNT(*) FROM chat.users WHERE username = ?;"; 
+    
+    CassStatement* select_statement = cass_statement_new(select_query, 1);
+    cass_statement_bind_string(select_statement, 0, username.c_str());
+
+    const json result = database.SelectQuery(select_statement);
 
     if (result.empty() || !result[0].contains("count")) {
         res.status = 500;
@@ -152,12 +170,12 @@ void createUser(const httplib::Request& req, httplib::Response& res, ChatRoomDB&
         "INSERT INTO chat.users (user_id, created_at, username, password, salt) "
         "VALUES (uuid(), toTimestamp(now()), ?, ?, ?);";
 
-    CassStatement* statement = cass_statement_new(insert_query, 3);
-    cass_statement_bind_string(statement, 0, username.c_str());
-    cass_statement_bind_string(statement, 1, hash);
-    cass_statement_bind_string(statement, 2, salt);
+    CassStatement* insert_statement = cass_statement_new(insert_query, 3);
+    cass_statement_bind_string(insert_statement, 0, username.c_str());
+    cass_statement_bind_string(insert_statement, 1, hash);
+    cass_statement_bind_string(insert_statement, 2, salt);
 
-    if (!database.ModifyQuery(statement)) {
+    if (!database.ModifyQuery(insert_statement)) {
         res.status = 500;
         res.set_content(R"({"error": "Internal server error"})", "application/json");
         return;

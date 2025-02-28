@@ -133,7 +133,7 @@ class ChatRoomDB {
     public:
         ChatRoomDB(const char* ip);
         ~ChatRoomDB();
-        json SelectQuery(const char* query, const std::vector<std::string>& params);
+        json SelectQuery(CassStatement* statement);
         bool ModifyQuery(CassStatement* statement);
 
     private:
@@ -171,13 +171,7 @@ ChatRoomDB::~ChatRoomDB() {
     cass_session_free(session);
 }
 
-json ChatRoomDB::SelectQuery(const char* query, const std::vector<std::string>& params) {
-    CassStatement* statement = cass_statement_new(query, params.size());
-
-    for (size_t i = 0; i < params.size(); i++) {
-        cass_statement_bind_string(statement, i, params[i].c_str());
-    }
-
+json ChatRoomDB::SelectQuery(CassStatement* statement) {
     CassFuture* result_future = cass_session_execute(session, statement);
     cass_statement_free(statement);
 

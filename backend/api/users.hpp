@@ -19,14 +19,16 @@ std::string createJwtToken(std::string user_id) {
         return "";
     }
 
+    const auto time = jwt::date::clock::now();
+
     auto token = jwt::create()
         .set_issuer("chat_rooms")
         .set_subject(user_id)
         .set_payload_claim("user_id", jwt::claim(user_id))
-        .set_expires_at(std::chrono::system_clock::now() + std::chrono::hours(24))
+        .set_expires_at(time + std::chrono::hours(24))
         .sign(jwt::algorithm::hs256{secret});
 
-    return token;
+    return token; 
 }
 
 std::string getUserIdFromUsername(ChatRoomDB& database, std::string username) {

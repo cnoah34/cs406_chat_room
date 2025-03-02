@@ -1,13 +1,13 @@
 <template>
     <div class="container">
         <h1 class='welcome'>Welcome</h1>
-        <Auth />
+        <Login />
     </div>
 </template>
 
 
 <script setup>
-    import Auth from '../components/Auth.vue'
+    import Login from '../components/Login.vue'
     import { ref } from 'vue'
 </script>
 

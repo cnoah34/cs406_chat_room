@@ -43,6 +43,7 @@
     import { ref } from 'vue'
     import axios from 'axios'
     import { useRouter } from 'vue-router'
+    import { login} from '@/auth'
 
     const router = useRouter()
 
@@ -123,8 +124,7 @@
                     const token = response.data.token
 
                     if (token) {
-                        localStorage.setItem('token', token)
-                        router.push('/home')
+                        login(token, router)    // Store the token and navigate to home
                     }
                     else {
                         result.value = { message: 'Token missing in response', isError: true }

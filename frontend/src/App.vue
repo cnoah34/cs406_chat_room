@@ -1,9 +1,9 @@
 <template>
     <div> 
         <nav>
-            <router-link v-if='!isAuthenticated' to='/'>Welcome</router-link>
+            <!--<router-link v-if='!isAuthenticated' to='/'>Welcome</router-link>-->
             <router-link v-if='isAuthenticated' to='/home'>Home</router-link>
-            <button v-if='isAuthenticated' @click='logout'>Logout</button>
+            <button v-if='isAuthenticated' @click='handleLogout'>Logout</button>
         </nav>
     </div>
     
@@ -12,16 +12,41 @@
 
 
 <script setup>
-    import { ref, computed } from 'vue'
+    import { ref, computed, watchEffect, onMounted, onUnmounted } from 'vue'
     import { RouterLink, RouterView, useRouter } from 'vue-router'
+    import { isAuthenticated, logout } from './auth'
 
     const router = useRouter()
-    const isAuthenticated = computed(() => !!localStorage.getItem('token'))
+
+    const handleLogout = () => {
+        logout(router)
+    }
+
+    /*
+    const isAuthenticated = ref(!!localStorage.getItem('token'))
+
+    const checkToken = () => {
+        isAuthenticated.value = !!localStorage.getItem('token')
+    }
+
+    watchEffect(() => {
+        checkToken()
+    })
+
+    onMounted(() => {
+        window.addEventListener('storage', checkToken)
+    })
+
+    onUnmounted(() => {
+        window.removeEventListener('storage', checkToken)
+    })
 
     const logout = () => {
         localStorage.removeItem('token')
+        checkToken()
         router.push('/')
     }
+    */
 
 </script>
 

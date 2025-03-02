@@ -2,7 +2,7 @@
 #define CHATDB_HPP_INCLUDED
 
 // Compile with: g++ connect.cpp [-L <dir_containing_libscylla-cpp-driver.so> -Wl,-rpath,<dir_containing_libscylla-cpp-driver.so> -I <path_to_cassandra.h>] -lscylla-cpp-driver -o connect
-#include <cassandra.h>
+#include <cpp-driver/include/cassandra.h>
 #include <iostream>
 #include <chrono>
 #include <ctime>
@@ -11,7 +11,7 @@
 #include <map>
 #include <set>
 
-#include <json.hpp>
+#include <nlohmann/json.hpp>
 using json = nlohmann::json;
 
 

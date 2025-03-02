@@ -11,9 +11,8 @@
 #include <sstream>
 #include <algorithm>
 
-#include <json.hpp>
-#include <BCrypt.hpp>
-#include <httplib.h>
+#include <nlohmann/json.hpp>
+#include <cpp-httplib/httplib.h>
 
 // Custom
 #include <chatDB.hpp>

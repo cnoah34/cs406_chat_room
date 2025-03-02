@@ -1,7 +1,8 @@
 #ifndef CHATUSER_HPP_INCLUDED
 #define CHATUSER_HPP_INCLUDED
 
-#include <jwt.h>
+#include <jwt-cpp/jwt.h>
+#include <libbcrypt/include/bcrypt/BCrypt.hpp>
 
 // Custom
 #include <chatDB.hpp>
@@ -9,6 +10,38 @@
 
 using json = nlohmann::json;
 
+
+std::string createJwtToken(std::string user_id) {
+    const std::string secret = std::getenv("JWT_SECRET");
+
+    if (secret.empty()) {
+        std::cerr << "JWT secret not found in environment variables" << std::endl;
+        return "";
+    }
+
+    auto token = jwt::create()
+        .set_issuer("chat_rooms")
+        .set_subject(user_id)
+        .set_payload_claim("user_id", jwt::claim(user_id))
+        .set_expires_at(std::chrono::system_clock::now() + std::chrono::hours(24))
+        .sign(jwt::algorithm::hs256{secret});
+
+    return token;
+}
+
+std::string getUserIdFromUsername(ChatRoomDB& database, std::string username) {
+    const char* query = "SELECT user_id FROM chat.users WHERE username = ?";
+    CassStatement* statement = cass_statement_new(query, 1);
+    cass_statement_bind_string(statement, 0, username.c_str());
+
+    const json result = database.SelectQuery(statement);
+
+    if (result.empty() || !result[0].contains("user_id")) {
+        return "";
+    }
+
+    return result[0]["user_id"];
+}
 
 void getUserDetails(const httplib::Request& req, httplib::Response& res, ChatRoomDB& database) {
     // Get and verify params
@@ -47,16 +80,7 @@ void getUserDetails(const httplib::Request& req, httplib::Response& res, ChatRoo
     return;
 }
 
-
-void verifyUser(const httplib::Request& req, httplib::Response& res, ChatRoomDB& database) {
-    if (!checkFields(req, res, {"username", "password"})) {
-        return;
-    }
-
-    const json body = json::parse(req.body);
-    const std::string username = body["username"];
-    const std::string provided_password = body["password"];
-
+bool userExists(httplib::Response& res, ChatRoomDB& database, const std::string username) {
     const char* user_exists_query = "SELECT COUNT(*) FROM chat.users WHERE username = ?;"; 
     CassStatement* user_exists_statement = cass_statement_new(user_exists_query, 1);
     cass_statement_bind_string(user_exists_statement, 0, username.c_str());
@@ -67,12 +91,29 @@ void verifyUser(const httplib::Request& req, httplib::Response& res, ChatRoomDB&
         // Failed to determine if user exists
         res.status = 500;
         res.set_content(R"({"error": "Internal server error"})", "application/json");
-        return;
+        return true;
     }
     else if (user_exists_result[0]["count"] == 0) {
         // User does not exist
         res.status = 401;
         res.set_content(R"({"error": "Incorrect username or password"})", "application/json");
+        return true;
+    }
+
+    return false;
+}
+
+void verifyUser(const httplib::Request& req, httplib::Response& res, ChatRoomDB& database) {
+    if (!checkFields(req, res, {"username", "password"})) {
+        return;
+    }
+
+    const json body = json::parse(req.body);
+    const std::string username = body["username"];
+    const std::string provided_password = body["password"];
+
+    // No user with username
+    if (!userExists(res, database, username)) {
         return;
     }
     
@@ -105,6 +146,7 @@ void verifyUser(const httplib::Request& req, httplib::Response& res, ChatRoomDB&
 
     const std::string hashed_provided_pw(hash); 
 
+    // Compare hash created with provided password to database hash
     if (hashed_provided_pw != credentials_result[0]["password"]) {
         // Password does not match
         res.status = 401;
@@ -113,7 +155,17 @@ void verifyUser(const httplib::Request& req, httplib::Response& res, ChatRoomDB&
     }
 
     // Create and return JWT here?
+    std::string token = createJwtToken(getUserIdFromUsername(database, username));
+
+    if (token.empty()) {
+        res.status = 500;
+        res.set_content(R"({"error": "Failed to create JWT token"})", "application/json");
+        return;
+    }
+    
     res.status = 200;
+    res.set_header("Content-Type", "application/json");
+    res.body = "{\"token\":\"" + token + "\"}";
     return;
 }
 
@@ -159,21 +211,8 @@ void createUser(const httplib::Request& req, httplib::Response& res, ChatRoomDB&
     const std::string username = body["username"];
     const std::string password = body["password"];
 
-    const char* select_query = "SELECT COUNT(*) FROM chat.users WHERE username = ?;"; 
-    
-    CassStatement* select_statement = cass_statement_new(select_query, 1);
-    cass_statement_bind_string(select_statement, 0, username.c_str());
-
-    const json result = database.SelectQuery(select_statement);
-
-    if (result.empty() || !result[0].contains("count")) {
-        res.status = 500;
-        res.set_content(R"({"error": "Internal server error"})", "application/json");
-        return;
-    }
-    else if (result[0]["count"] != 0) {
-        res.status = 400;
-        res.set_content(R"({"error": "User with same username already exists"})", "application/json");
+    // User with username already exists
+    if (userExists(res, database, username)) {
         return;
     }
 
@@ -194,8 +233,6 @@ void createUser(const httplib::Request& req, httplib::Response& res, ChatRoomDB&
         res.set_content(R"({"error": "Internal server error"})", "application/json");
         return;
     }
-
-    //const std::string hashed_pw(hash);
 
     const char* insert_query = 
         "INSERT INTO chat.users (user_id, created_at, username, password, salt) "

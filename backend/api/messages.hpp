@@ -2,8 +2,8 @@
 #define CHATMESSAGE_HPP_INCLUDED
 
 // Custom
-#include "chatDB.hpp"
-#include "commonFunctions.hpp"
+#include <chatDB.hpp>
+#include <commonFunctions.hpp>
 
 using json = nlohmann::json;
 

@@ -3,11 +3,7 @@ CC=g++
 CFLAGS=-Wall -Wextra 
 
 # Include directories
-INCLUDE=-I./include/cpp-driver/include/ \
-	-I./include/nlohmann/ \
-	-I./include/libbcrypt/include/bcrypt/ \
-	-I./include/cpp-httplib/ \
-	-I./include/jwt-cpp \
+INCLUDE=-I./include \
 	-I./database \
 	-I./api
 

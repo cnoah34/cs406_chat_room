@@ -4,8 +4,8 @@
 #include <vector>
 #include <string>
 
-#include <json.hpp>
-#include <httplib.h>
+#include <nlohmann/json.hpp>
+#include <cpp-httplib/httplib.h>
 
 
 void setCommonHeaders(httplib::Response& res) {

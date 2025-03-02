@@ -42,6 +42,9 @@
 <script setup>
     import { ref } from 'vue'
     import axios from 'axios'
+    import { useRouter } from 'vue-router'
+
+    const router = useRouter()
 
     const isLogin = ref(true)
     const showPasswordRequirements = ref(false)
@@ -115,13 +118,17 @@
                         : 'Sign up successful, please login',
                     isError: false
                 }
-
                     
                 if (isLogin.value) {
-                    // TODO: Check response for JWT here
+                    const token = response.data.token
 
-                    console.log('logging in')
-                    router.push('/home')
+                    if (token) {
+                        localStorage.setItem('token', token)
+                        router.push('/home')
+                    }
+                    else {
+                        result.value = { message: 'Token missing in response', isError: true }
+                    }
                 }
             }
         }

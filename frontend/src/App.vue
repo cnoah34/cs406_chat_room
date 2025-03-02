@@ -1,17 +1,29 @@
+<template>
+    <div> 
+        <nav>
+            <router-link v-if='!isAuthenticated' to='/'>Welcome</router-link>
+            <router-link v-if='isAuthenticated' to='/home'>Home</router-link>
+        </nav>
+    </div>
+    
+    <RouterView />
+</template>
+
+
 <script setup>
-import Home from './components/Home.vue'
-import SignUp from './components/SignUp.vue'
-import Login from './components/Login.vue'
+    import { ref, computed } from 'vue'
+    import { RouterLink, RouterView, useRouter } from 'vue-router'
+
+    const router = useRouter()
+    const isAuthenticated = computed(() => !!localStorage.getItem('token'))
+
+    const logout = () => {
+        localStorage.removeItem('token')
+        router.push('/')
+    }
+
 </script>
 
-<template>
-    <SignUp />
-    <!--
-    <div class="parent-container">
-        <SignUp />
-    </div>
-    -->
-</template>
 
 <style>
 .parent-container {

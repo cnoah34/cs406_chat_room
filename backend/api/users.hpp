@@ -82,7 +82,7 @@ void getUserDetails(const httplib::Request& req, httplib::Response& res, ChatRoo
     return;
 }
 
-bool userExists(httplib::Response& res, ChatRoomDB& database, const std::string username) {
+int userExists(httplib::Response& res, ChatRoomDB& database, const std::string username) {
     const char* user_exists_query = "SELECT COUNT(*) FROM chat.users WHERE username = ?;"; 
     CassStatement* user_exists_statement = cass_statement_new(user_exists_query, 1);
     cass_statement_bind_string(user_exists_statement, 0, username.c_str());
@@ -93,16 +93,16 @@ bool userExists(httplib::Response& res, ChatRoomDB& database, const std::string 
         // Failed to determine if user exists
         res.status = 500;
         res.set_content(R"({"error": "Internal server error"})", "application/json");
-        return true;
+        return -1;  // -1 because we don't know
     }
     else if (user_exists_result[0]["count"] == 0) {
         // User does not exist
         res.status = 401;
         res.set_content(R"({"error": "Incorrect username or password"})", "application/json");
-        return true;
+        return 0;
     }
 
-    return false;
+    return 1;
 }
 
 void verifyUser(const httplib::Request& req, httplib::Response& res, ChatRoomDB& database) {
@@ -115,7 +115,7 @@ void verifyUser(const httplib::Request& req, httplib::Response& res, ChatRoomDB&
     const std::string provided_password = body["password"];
 
     // No user with username
-    if (!userExists(res, database, username)) {
+    if (userExists(res, database, username) != 1) {
         return;
     }
     
@@ -156,7 +156,7 @@ void verifyUser(const httplib::Request& req, httplib::Response& res, ChatRoomDB&
         return;
     }
 
-    // Create and return JWT here?
+    // Create a JWT
     std::string token = createJwtToken(getUserIdFromUsername(database, username));
 
     if (token.empty()) {
@@ -214,7 +214,7 @@ void createUser(const httplib::Request& req, httplib::Response& res, ChatRoomDB&
     const std::string password = body["password"];
 
     // User with username already exists
-    if (userExists(res, database, username)) {
+    if (userExists(res, database, username) != 0) {
         return;
     }
 

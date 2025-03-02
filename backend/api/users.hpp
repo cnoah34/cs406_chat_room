@@ -55,13 +55,33 @@ void verifyUser(const httplib::Request& req, httplib::Response& res, ChatRoomDB&
     const std::string username = body["username"];
     const std::string provided_password = body["password"];
 
-    const char* query = "SELECT password, salt FROM chat.users WHERE username = ?;";
-    CassStatement* statement = cass_statement_new(query, 1);
-    cass_statement_bind_string(statement, 0, username.c_str());
+    const char* user_exists_query = "SELECT COUNT(*) FROM chat.users WHERE username = ?;"; 
+    CassStatement* user_exists_statement = cass_statement_new(user_exists_query, 1);
+    cass_statement_bind_string(user_exists_statement, 0, username.c_str());
 
-    const json result = database.SelectQuery(statement);
+    const json user_exists_result = database.SelectQuery(user_exists_statement);
 
-    if (result.empty() || !result[0].contains("password") || !result[0].contains("salt")) {
+    if (user_exists_result.empty() || !user_exists_result[0].contains("count")) {
+        // Failed to determine if user exists
+        res.status = 500;
+        res.set_content(R"({"error": "Internal server error"})", "application/json");
+        return;
+    }
+    else if (user_exists_result[0]["count"] == 0) {
+        // User does not exist
+        res.status = 401;
+        res.set_content(R"({"error": "Incorrect username or password"})", "application/json");
+        return;
+    }
+    
+    const char* credentials_query = "SELECT password, salt FROM chat.users WHERE username = ?;";
+    CassStatement* credentials_statement = cass_statement_new(credentials_query, 1);
+    cass_statement_bind_string(credentials_statement, 0, username.c_str());
+
+    const json credentials_result = database.SelectQuery(credentials_statement);
+
+    if (credentials_result.empty() || !credentials_result[0].contains("password") || !credentials_result[0].contains("salt")) {
+        // Failed to get user credentials
         res.status = 500;
         res.set_content(R"({"error": "Internal server error"})", "application/json");
         return;
@@ -71,7 +91,7 @@ void verifyUser(const httplib::Request& req, httplib::Response& res, ChatRoomDB&
     char salt[BCRYPT_HASHSIZE]; 
 
     // Copy the salt from database
-    const std::string salt_string = result[0]["salt"];
+    const std::string salt_string = credentials_result[0]["salt"];
     std::strcpy(salt, salt_string.c_str());
 
     int ret = bcrypt_hashpw(provided_password.c_str(), salt, hash);
@@ -83,14 +103,15 @@ void verifyUser(const httplib::Request& req, httplib::Response& res, ChatRoomDB&
 
     const std::string hashed_provided_pw(hash); 
 
-    if (hashed_provided_pw != result[0]["password"]) {
+    if (hashed_provided_pw != credentials_result[0]["password"]) {
+        // Password does not match
         res.status = 401;
-        res.set_content(R"({"error": "Incorrect password"})", "application/json");
+        res.set_content(R"({"error": "Incorrect username or password"})", "application/json");
         return;
     }
 
     // Create and return JWT here?
-    res.status = 204;
+    res.status = 200;
     return;
 }
 

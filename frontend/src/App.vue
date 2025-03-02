@@ -3,6 +3,7 @@
         <nav>
             <router-link v-if='!isAuthenticated' to='/'>Welcome</router-link>
             <router-link v-if='isAuthenticated' to='/home'>Home</router-link>
+            <button v-if='isAuthenticated' @click='logout'>Logout</button>
         </nav>
     </div>
     

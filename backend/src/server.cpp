@@ -21,15 +21,21 @@
 #include <messages.hpp>
 #include <rooms.hpp>
 
-#define PORT 8080
-#define DATABASE_IP "172.19.0.2"
 
 using json = nlohmann::json;
 
 int main() {
+    const char* portStr = std::getenv("PORT");
+    if (portStr == nullptr) {
+        std::cerr << "PORT environment variable not set" << std::endl;
+        return 1;
+    }
+
+    int port = std::stoi(portStr);
+
     httplib::Server svr;
 
-    ChatRoomDB database(DATABASE_IP);
+    ChatRoomDB database(std::getenv("DATABASE_IP"));
 
     svr.Options(R"(/.*)", [](const httplib::Request&, httplib::Response& res) {
         setCommonHeaders(res);
@@ -40,7 +46,7 @@ int main() {
     defineMessageMethods(svr, database);
     defineRoomMethods(svr, database);
 
-    svr.listen("0.0.0.0", PORT);
+    svr.listen("0.0.0.0", port);
 
     return 0;
 }

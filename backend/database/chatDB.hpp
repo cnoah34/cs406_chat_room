@@ -15,10 +15,18 @@
 using json = nlohmann::json;
 
 
-std::set<int> read_set(const CassValue* set) {
+std::set<int> readSet(const CassValue* set) {
+    std::set<int> result;
+
+    if (!set) {
+        return result;
+    }
+
     CassIterator* iterator = cass_iterator_from_collection(set);
 
-    std::set<int> result;
+    if (!iterator) {
+        return result;
+    }
 
     while (cass_iterator_next(iterator)) {
         const CassValue* iter_value = cass_iterator_get_value(iterator);
@@ -34,7 +42,28 @@ std::set<int> read_set(const CassValue* set) {
     return result;
 }
 
-std::string read_timestamp(cass_int64_t timestamp) {
+CassError cassTimestampFromString(const char* time_string, cass_int64_t* output) {
+    std::tm tm_time = {};
+    std::istringstream ss(time_string);
+
+    ss >> std::get_time(&tm_time, "%Y-%m-%dT%H:%M:%SZ");
+
+    if (ss.fail()) {
+        return CASS_ERROR_LIB_BAD_PARAMS;
+    }
+
+    time_t time_c = std::mktime(&tm_time);
+
+    if (time_c == -1) {
+        return CASS_ERROR_LIB_BAD_PARAMS;
+    }
+
+    *output = static_cast<cass_int64_t>(time_c) * 1000;
+
+    return CASS_OK;
+}
+
+std::string readTimestamp(cass_int64_t timestamp) {
     std::time_t time_sec = timestamp / 1000;    // Convert to seconds
     std::tm* tm_time = std::gmtime(&time_sec);  // Convert to UTC
 
@@ -47,13 +76,13 @@ std::string read_timestamp(cass_int64_t timestamp) {
     return ss.str();
 }
 
-json dynamic_read(CassFuture* future) {
+json dynamicRead(CassFuture* future) {
     json large_json;
 
     const CassResult* result = cass_future_get_result(future);
 
     if (cass_result_row_count(result) == 0) {
-        std::cout << "Query returned no rows" << std::endl;
+        // std::cout << "Query returned no rows" << std::endl;
         cass_result_free(result);
         return large_json;
     }
@@ -94,7 +123,7 @@ json dynamic_read(CassFuture* future) {
                 case CASS_VALUE_TYPE_TIMESTAMP:
                     cass_int64_t timestamp_value;
                     cass_value_get_int64(column_value, &timestamp_value);
-                    json_object[column_name] = read_timestamp(timestamp_value);
+                    json_object[column_name] = readTimestamp(timestamp_value);
                     break;
                 case CASS_VALUE_TYPE_VARCHAR: {
                     const char* text_value;
@@ -113,7 +142,7 @@ json dynamic_read(CassFuture* future) {
                     break;
                 }
                 case CASS_VALUE_TYPE_SET:
-                    json_object[column_name] = read_set(column_value);
+                    json_object[column_name] = readSet(column_value);
                     break;
                 default:
                     break;
@@ -144,7 +173,7 @@ class ChatRoomDB {
 };
 
 ChatRoomDB::ChatRoomDB(const char* ip) : connect_future(nullptr) {
-    // std::cout << "Constructor" << std::endl;
+    // std::cout << "ChatRoomDB Constructor" << std::endl;
 
     // Add the contact points. These can be either IPs or domain names.
     // You can specify more than one, comma-separated, but you don’t have to - driver will discover other nodes by itself. You should do it if you expect some of your contact points to be down.
@@ -163,7 +192,7 @@ ChatRoomDB::ChatRoomDB(const char* ip) : connect_future(nullptr) {
 }
 
 ChatRoomDB::~ChatRoomDB() {
-    // std::cout << "Destructor" << std::endl;
+    // std::cout << "ChatRoomDB Destructor" << std::endl;
 
     // Release the resources.
     cass_future_free(connect_future);
@@ -178,7 +207,7 @@ json ChatRoomDB::SelectQuery(CassStatement* statement) {
     json json_result;
 
     if (cass_future_error_code(result_future) == CASS_OK) {
-        json_result = dynamic_read(result_future);
+        json_result = dynamicRead(result_future);
     }
     else {
         const char* message;

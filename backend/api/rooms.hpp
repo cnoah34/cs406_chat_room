@@ -19,7 +19,7 @@ void removeAdmin(const httplib::Request& req, httplib::Response& res, ChatRoomDB
     CassUuid user_uuid;
 
     if (cass_uuid_from_string(room_id.c_str(), &room_uuid) != CASS_OK ||
-        cass_uuid_from_string(room_id.c_str(), &user_uuid) != CASS_OK) {
+        cass_uuid_from_string(user_id.c_str(), &user_uuid) != CASS_OK) {
         res.status = 400;
         res.set_content(R"({"error": "Invalid parameter format"})", "application/json");
         return;
@@ -162,10 +162,12 @@ void addUserToRoom(const httplib::Request& req, httplib::Response& res, ChatRoom
     return;
 }
 
-void deleteRoom(httplib::Response& res, ChatRoomDB& database, const std::string room_id) {
+void deleteRoom(const httplib::Request& req, httplib::Response& res, ChatRoomDB& database) {
+    const std::string room_id = req.path_params.at("room_id");
+    
     if (room_id.empty()) {
         res.status = 400;
-        res.set_content(R"({"error": "Missing room ID"})", "application/json");
+        res.set_content(R"({"error": "Missing required fields"})", "application/json");
         return;
     }
 
@@ -211,14 +213,19 @@ void createRoom(const httplib::Request& req, httplib::Response& res, ChatRoomDB 
         return;
     }
 
+    CassCollection* admin_set = cass_collection_new(CASS_COLLECTION_TYPE_LIST, 1);
+    cass_collection_append_uuid(admin_set, user_uuid);
+    CassCollection* user_set = cass_collection_new(CASS_COLLECTION_TYPE_LIST, 1);
+    cass_collection_append_uuid(user_set, user_uuid);
+
     const char* query = "INSERT INTO chat.rooms (room_id, name, owner_id, admin_ids, user_ids, created_at) " 
-            "VALUES (uuid(), '?', ?, {?}, {?}, toTimestamp(now()));";
+            "VALUES (uuid(), ?, ?, ?, ?, toTimestamp(now()));";
 
     CassStatement* statement = cass_statement_new(query, 4);
     cass_statement_bind_string(statement, 0, name.c_str());
     cass_statement_bind_uuid(statement, 1, user_uuid);
-    cass_statement_bind_uuid(statement, 2, user_uuid);
-    cass_statement_bind_uuid(statement, 3, user_uuid);
+    cass_statement_bind_collection(statement, 2, admin_set);
+    cass_statement_bind_collection(statement, 3, user_set);
 
     if (!database.ModifyQuery(statement)) {
         res.status = 500;
@@ -257,9 +264,7 @@ void defineRoomMethods(httplib::Server& svr, ChatRoomDB& database) {
 
     // Delete room
     svr.Delete("/rooms/:room_id", [&database](const httplib::Request& req, httplib::Response& res) {
-        const std::string room_id = req.matches[1];
-
-        deleteRoom(res, database, room_id);
+        deleteRoom(req, res, database);
         setCommonHeaders(res);
     });
 

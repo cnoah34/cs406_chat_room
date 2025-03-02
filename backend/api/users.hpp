@@ -8,10 +8,13 @@
 using json = nlohmann::json;
 
 
-void getUserDetails(httplib::Response& res, ChatRoomDB& database, const std::string user_id) {
+void getUserDetails(const httplib::Request& req, httplib::Response& res, ChatRoomDB& database) {
+    // Get and verify params
+    const std::string user_id = req.path_params.at("user_id");
+
     if (user_id.empty()) {
         res.status = 400;
-        res.set_content(R"({"error": "Missing user ID"})", "application/json");
+        res.set_content(R"({"error": "Missing required fields"})", "application/json");
         return;
     }
 
@@ -23,6 +26,7 @@ void getUserDetails(httplib::Response& res, ChatRoomDB& database, const std::str
         return;
     }
 
+    // Query
     const char* query = "SELECT username, room_ids, created_at FROM chat.users WHERE user_id = ?;"; 
 
     CassStatement* statement = cass_statement_new(query, 1);
@@ -90,10 +94,13 @@ void verifyUser(const httplib::Request& req, httplib::Response& res, ChatRoomDB&
     return;
 }
 
-void deleteUser(httplib::Response& res, ChatRoomDB& database, const std::string user_id) { 
+void deleteUser(const httplib::Request& req, httplib::Response& res, ChatRoomDB& database) { 
+    // Verify params
+    const std::string user_id = req.path_params.at("user_id");
+
     if (user_id.empty()) {
         res.status = 400;
-        res.set_content(R"({"error": "Missing user ID"})", "application/json");
+        res.set_content(R"({"error": "Missing required fields"})", "application/json");
         return;
     }
 
@@ -101,10 +108,11 @@ void deleteUser(httplib::Response& res, ChatRoomDB& database, const std::string 
 
     if (cass_uuid_from_string(user_id.c_str(), &user_uuid) != CASS_OK) {
         res.status = 400;
-        res.set_content(R"({"error": "Invalid user ID format"})", "application/json");
+        res.set_content(R"({"error": "Invalid parameter format"})", "application/json");
         return;
     }
 
+    // Query
     const char* query = "DELETE FROM chat.users WHERE user_id = ?;";
     CassStatement* statement = cass_statement_new(query, 1);
     cass_statement_bind_uuid(statement, 0, user_uuid);
@@ -187,9 +195,7 @@ void createUser(const httplib::Request& req, httplib::Response& res, ChatRoomDB&
 
 void defineUserMethods(httplib::Server& svr, ChatRoomDB& database) {
     svr.Get("/users/:user_id", [&database](const httplib::Request& req, httplib::Response& res) {
-        const std::string user_id = req.matches[1];
-
-        getUserDetails(res, database, user_id);
+        getUserDetails(req, res, database);
         setCommonHeaders(res);
     });
 
@@ -204,9 +210,7 @@ void defineUserMethods(httplib::Server& svr, ChatRoomDB& database) {
     });
 
     svr.Delete("/users/:user_id", [&database](const httplib::Request& req, httplib::Response& res) {
-        const std::string user_id = req.path_params.at("user_id");
-
-        deleteUser(res, database, user_id);
+        deleteUser(req, res, database);
         setCommonHeaders(res);
     });
 

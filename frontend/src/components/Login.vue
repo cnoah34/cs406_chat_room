@@ -43,7 +43,7 @@
     import { ref } from 'vue'
     import axios from 'axios'
     import { useRouter } from 'vue-router'
-    import { login} from '@/auth'
+    import { login } from '@/auth'
 
     const router = useRouter()
 
@@ -90,8 +90,9 @@
     const toggleForm = () => {
         isLogin.value = !isLogin.value
         formData.value.password = ''
-        result.value = { message: '', isError: false }
+        checkRequirements()
         showPasswordRequirements.value = false
+        result.value = { message: '', isError: false }
     }
     
     const validatePassword = (password) => {

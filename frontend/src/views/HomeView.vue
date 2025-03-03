@@ -1,7 +1,7 @@
 <template>
-    <div class="home">
-        <h1>Home</h1>
-        <p>You made it</p>
+    <div class='home'>
+        <p class='left'>Left</p>
+        <p class='right'>Right</p>
     </div>
 </template>
 
@@ -11,8 +11,16 @@
 
 
 <style scoped>
-    .home {
-        text-align: center;
-        padding: 20px;
-    }
+.home {
+    display: flex;
+    flex-direction: row;
+}
+
+.home .left {
+    margin-right: 20%;
+}
+
+.home .right {
+}
+
 </style>

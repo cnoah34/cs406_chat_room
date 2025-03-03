@@ -1,6 +1,7 @@
 #ifndef CHATUSER_HPP_INCLUDED
 #define CHATUSER_HPP_INCLUDED
 
+#include <optional>
 #include <jwt-cpp/jwt.h>
 #include <libbcrypt/include/bcrypt/BCrypt.hpp>
 
@@ -10,12 +11,63 @@
 
 using json = nlohmann::json;
 
+std::optional<CassUuid> getUserIdFromToken(std::string& authHeader) {
+    if (authHeader.empty() || authHeader.find("Bearer ") != 0) {
+        return std::nullopt;
+    }
+
+    std::string token = authHeader.substr(7);
+
+    try {
+        const char* secret_cstr = std::getenv("JWT_SECRET");
+        if (!secret_cstr) {
+            std::cerr << "JWT secret not found in environment variables" << std::endl;
+            return std::nullopt;
+        }
+
+        std::string secret(secret_cstr);
+        if (secret.empty()) {
+            return std::nullopt;
+        }
+
+        auto decoded = jwt::decode(token);
+
+        auto verifier = jwt::verify()
+            .allow_algorithm(jwt::algorithm::hs256{secret})
+            .with_issuer("chat_rooms");
+
+        verifier.verify(decoded);
+
+        if (decoded.has_payload_claim("user_id")) {
+            std::string user_id_str = decoded.get_payload_claim("user_id").as_string();
+            CassUuid user_uuid;
+
+            CassError rc = cass_uuid_from_string(user_id_str.c_str(), &user_uuid);
+
+            if (rc != CASS_OK) {
+                std::cerr << "Invalid UUID format in token" << std::endl;
+                return std::nullopt;
+            }
+
+            return user_uuid;
+        }
+    }
+    catch (const std::exception& e) {
+        return std::nullopt;
+    }
+
+    return std::nullopt;
+}
 
 std::string createJwtToken(std::string user_id) {
-    const std::string secret = std::getenv("JWT_SECRET");
-
-    if (secret.empty()) {
+    const char* secret_cstr = std::getenv("JWT_SECRET");
+    if (!secret_cstr) {
         std::cerr << "JWT secret not found in environment variables" << std::endl;
+        return "";
+    }
+
+    std::string secret(secret_cstr);
+    if (secret.empty()) {
         return "";
     }
 
@@ -46,7 +98,19 @@ std::string getUserIdFromUsername(ChatRoomDB& database, std::string username) {
 }
 
 void getUserDetails(const httplib::Request& req, httplib::Response& res, ChatRoomDB& database) {
+    std::string authHeader = req.get_header_value("Authorization");
+
+    std::optional<CassUuid> userUuidOpt = getUserIdFromToken(authHeader);
+    if (!userUuidOpt.has_value()) {
+        res.status = 401;
+        res.set_content(R"({"error": "Not authorized"})", "application/json");
+        return;
+    }
+
+    CassUuid user_uuid = userUuidOpt.value();
+
     // Get and verify params
+    /*
     const std::string user_id = req.path_params.at("user_id");
 
     if (user_id.empty()) {
@@ -62,6 +126,7 @@ void getUserDetails(const httplib::Request& req, httplib::Response& res, ChatRoo
         res.set_content(R"({"error": "Invalid parameter format"})", "application/json");
         return;
     }
+    */
 
     // Query
     const char* query = "SELECT username, room_ids, created_at FROM chat.users WHERE user_id = ?;"; 
@@ -256,7 +321,7 @@ void createUser(const httplib::Request& req, httplib::Response& res, ChatRoomDB&
 }
 
 void defineUserMethods(httplib::Server& svr, ChatRoomDB& database) {
-    svr.Get("/users/:user_id", [&database](const httplib::Request& req, httplib::Response& res) {
+    svr.Get("/users/metadata", [&database](const httplib::Request& req, httplib::Response& res) {
         getUserDetails(req, res, database);
         setCommonHeaders(res);
     });

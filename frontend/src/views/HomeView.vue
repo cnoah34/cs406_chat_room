@@ -1,13 +1,14 @@
 <template>
     <div class='home'>
-        <RoomSelection class='left'/>
-        <p class='right'>Right</p>
+        <Rooms class="left" />
+        <Messages class="right" />
     </div>
 </template>
 
 
 <script setup>
-    import RoomSelection from '../components/RoomSelection.vue'
+    import Rooms from '../components/Rooms.vue'
+    import Messages from '../components/Messages.vue'
 </script>
 
 
@@ -21,9 +22,14 @@
 .home .left {
     padding-right: 100px;
     border: 3px solid var(--vue-green);
+    height: 100%
 }
 
 .home .right {
+    flex-grow: 1;
+    height: 100%;
+    border: 3px solid var(--vue-green);
+    border-left: none;
 }
 
 </style>

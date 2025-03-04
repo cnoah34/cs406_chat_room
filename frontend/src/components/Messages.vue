@@ -22,12 +22,12 @@
     const loading = ref(false)
     const hasMoreMessages = ref(true)
 
-    const getMessages = async (beforeTime = null) => {
+    const getMessages = async (before = null) => {
         try {
             loading.value = true
 
-            const url = beforeTime
-                ? `${apiStore.rest_url}/messages?room_id=${roomStore.room_id}&limit=20&before_time=${beforeTime}`
+            const url = before
+                ? `${apiStore.rest_url}/messages?room_id=${roomStore.room_id}&limit=20&before=${before}`
                 : `${apiStore.rest_url}/messages?room_id=${roomStore.room_id}&limit=20`
 
             const response = await axios.get(url, {

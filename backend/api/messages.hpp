@@ -6,37 +6,41 @@
 
 void getMessages(const httplib::Request& req, httplib::Response& res, ChatRoomDB& database) {
     const std::string room_id = req.path_params.at("room_id");
-    const std::string start = req.path_params.at("start");
-    const std::string end = req.path_params.at("end");
 
-    if (room_id.empty() || start.empty() || end.empty()) {
+    if (room_id.empty()) {
         res.status = 400;
         res.set_content(R"({"error": "Missing required fields"})", "application/json");
         return;
     }
 
+    std::string before = req.has_param("before") ? req.get_param_value("before") : "";
+    std::string limit_str = req.has_param("limit") ? req.get_param_value("limit") : "50";
+    int limit = stoi(limit_str);
+
+
     CassUuid room_uuid;
-    cass_int64_t start_timestamp;
-    cass_int64_t end_timestamp;
+    cass_int64_t before_timestamp;
 
-    if (cass_uuid_from_string(room_id.c_str(), &room_uuid) != CASS_OK ||
-            cassTimestampFromString(start.c_str(), &start_timestamp) != CASS_OK ||
-            cassTimestampFromString(end.c_str(), &end_timestamp) != CASS_OK) {
-
+    if (cass_uuid_from_string(room_id.c_str(), &room_uuid) != CASS_OK) {
         res.status = 400;
-        res.set_content(R"({"error": "Invalid parameter format"})", "application/json");
+        res.set_content(R"({"error": "Invalid parameter 'room_id'"})", "application/json");
+        return;
+    }
+
+    if (!before.empty() && cassTimestampFromString(before.c_str(), &before_timestamp) != CASS_OK) {
+        res.status = 400;
+        res.set_content(R"({"error": "Invalid parameter 'before'"})", "application/json");
         return;
     }
 
     const char* query = "SELECT user_id, content, created_at FROM chat.messages "
-            "WHERE room_id = ? "
-            "AND created_at >= minTimeuuid(?) "
-            "AND created_at <= maxTimeuuid(?);";
+        "WHERE room_id = ? AND created_at < minTimeuuid(?) "
+        "ORDER BY created_at DESC LIMIT ?;";
 
     CassStatement* statement = cass_statement_new(query, 3);
     cass_statement_bind_uuid(statement, 0, room_uuid);
-    cass_statement_bind_int64(statement, 1, start_timestamp);
-    cass_statement_bind_int64(statement, 2, end_timestamp);
+    cass_statement_bind_int64(statement, 1, before_timestamp);
+    cass_statement_bind_int32(statement, 2, limit);
 
     const json result = database.SelectQuery(statement);
 
@@ -164,7 +168,7 @@ void createMessage(const httplib::Request& req, httplib::Response& res, ChatRoom
 }
 
 void defineMessageMethods(httplib::Server& svr, ChatRoomDB& database) {
-    svr.Get("/messages/:room_id/:start/:end", [&database](const httplib::Request& req, httplib::Response& res) {
+    svr.Get("/messages/:room_id", [&database](const httplib::Request& req, httplib::Response& res) {
         getMessages(req, res, database);
         setCommonHeaders(res);
     });

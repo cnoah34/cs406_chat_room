@@ -5,6 +5,17 @@
 
 
 void getMessages(const httplib::Request& req, httplib::Response& res, ChatRoomDB& database) {
+    std::string authHeader = req.get_header_value("Authorization");
+
+    std::optional<CassUuid> userUuidOpt = getUserIdFromToken(authHeader);
+    if (!userUuidOpt.has_value()) {
+        res.status = 401;
+        res.set_content(R"({"error": "Not authorized"})", "application/json");
+        return;
+    }
+
+    CassUuid user_uuid = userUuidOpt.value();
+
     const std::string room_id = req.path_params.at("room_id");
 
     if (room_id.empty()) {
@@ -13,16 +24,23 @@ void getMessages(const httplib::Request& req, httplib::Response& res, ChatRoomDB
         return;
     }
 
-    std::string before = req.has_param("before") ? req.get_param_value("before") : "";
-    std::string limit_str = req.has_param("limit") ? req.get_param_value("limit") : "50";
-    int limit = stoi(limit_str);
-
     CassUuid room_uuid;
     if (cass_uuid_from_string(room_id.c_str(), &room_uuid) != CASS_OK) {
         res.status = 400;
         res.set_content(R"({"error": "Invalid parameter 'room_id'"})", "application/json");
         return;
     }
+
+    if (!userInRoom(database, user_uuid, room_uuid)) {
+        res.status = 401;
+        res.set_content(R"({"error": "Not authorized"})", "application/json");
+        return;
+    }
+
+    std::string before = req.has_param("before") ? req.get_param_value("before") : "";
+    std::string limit_str = req.has_param("limit") ? req.get_param_value("limit") : "50";
+    int limit = stoi(limit_str);
+
 
     // Most recent messages by default
     cass_int64_t before_timestamp = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()) * 1000;

@@ -91,8 +91,6 @@ int userExists(httplib::Response& res, ChatRoomDB& database, const std::string u
     }
     else if (user_exists_result[0]["count"] == 0) {
         // User does not exist
-        res.status = 401;
-        res.set_content(R"({"error": "Incorrect username or password"})", "application/json");
         return 0;
     }
 
@@ -110,6 +108,8 @@ void verifyUser(const httplib::Request& req, httplib::Response& res, ChatRoomDB&
 
     // No user with username
     if (userExists(res, database, username) != 1) {
+        res.status = 401;
+        res.set_content(R"({"error": "Incorrect username or password"})", "application/json");
         return;
     }
     
@@ -209,6 +209,8 @@ void createUser(const httplib::Request& req, httplib::Response& res, ChatRoomDB&
 
     // User with username already exists
     if (userExists(res, database, username) != 0) {
+        res.status = 401;
+        res.set_content(R"({"error": "User with same username exists"})", "application/json");
         return;
     }
 

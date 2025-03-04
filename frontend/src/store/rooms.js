@@ -10,8 +10,7 @@ export const useRoomsStore = defineStore('rooms', {
             this.rooms = data
         },
         clearRooms() {
-            this.rooms = [] 
-            this.current_room = null
+            this.$reset()
             localStorage.removeItem('rooms')
         },
         addRoom(room) {

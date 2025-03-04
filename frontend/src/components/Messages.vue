@@ -1,11 +1,10 @@
 <template>
     <div class="messages-container" @scroll="handleScroll">
         <ul>
-            <li v-for="message in messages" :key="message.created_at">
-                <strong>{{ message.username }}</strong>: {{ message.content }}
+            <li v-for="message in messagesStore.messages" :key="message.created_at">
+                <strong style="font-weight: bold;">{{ message.username }}</strong>: {{ message.content }}
             </li>
         </ul>
-        <div v-if="loading">Loading...</div>
     </div>
 </template>
 
@@ -20,20 +19,21 @@
     const messagesStore = useMessagesStore()
     const apiStore = useApiStore()
 
-    const messages = messagesStore.messages
     const loading = ref(false)
     const hasMoreMessages = ref(true)
 
     const getMessages = async (before = null) => {
         try {
-            if (!roomsStore.current_room) {
+            if (!roomsStore.current_room.room_id) {
                 console.log('No room selected')
                 return
             }
 
             loading.value = true
 
-            const url = `${apiStore.rest_url}/messages/${roomsStore.current_room.room_id}?before=${before}&limit=3`;
+            const url = before
+            ? `${apiStore.rest_url}/messages/${roomsStore.current_room.room_id}?before=${before}&limit=3`
+            : `${apiStore.rest_url}/messages/${roomsStore.current_room.room_id}?limit=3`
 
             const response = await axios.get(url, {
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
@@ -44,7 +44,9 @@
             }
 
             // Prepend older messages
-            messagesStore.setMessages([...response.data, ...messagesStore.messages])
+            if (response.data) {
+                messagesStore.setMessages([...response.data, ...messagesStore.messages])
+            }
         }
         catch (error) {
             console.error('Error fetching messages: ', error)
@@ -91,6 +93,17 @@
     overflow-y: auto;
     border: 1px solid var(--vue-green);
     padding: 10px;
+}
+
+ul {
+    list-style-type: none;
+    margin: 0;
+    color: white;
+    font-size: 14pt;
+}
+
+li {
+    margin-top: 10px;
 }
 
 

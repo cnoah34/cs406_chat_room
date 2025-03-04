@@ -37,9 +37,10 @@ nav {
 
 button {
     width: 80px;
-    font-size: 12pt;
+    font-size: 16pt;
     background-color: var(--foreground);
     border: 3px solid var(--vue-green);
+    border-bottom: none;
     color: white;
     cursor: pointer;
 }

@@ -7,12 +7,11 @@ export const useMessagesStore = defineStore('messages', {
     actions: {
         setMessages(data) {
             this.messages = data
-        }
-
+        },
         clearMessages() {
-            this.messages = []
+            this.$reset()
             localStorage.removeItem('messages')
-        }
+        },
     },
     persist: true,
 })

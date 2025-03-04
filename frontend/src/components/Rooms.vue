@@ -74,14 +74,17 @@ ul {
     list-style-type: none;
     margin: 0;
     padding: 0;
+    overflow-y: auto;
+}
+
+li {
     color: var(--vue-green);
     cursor: pointer;
     text-decoration: underline;
     font-size: 14pt;
-    overflow-y: auto;
 }
 
-ul:hover {
+li:hover {
     text-decoration: none;
 }
 

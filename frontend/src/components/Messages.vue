@@ -25,7 +25,6 @@
     const getMessages = async (before = null) => {
         try {
             if (!roomsStore.current_room.room_id) {
-                console.log('No room selected')
                 return
             }
 

@@ -15,8 +15,8 @@
 using json = nlohmann::json;
 
 
-std::set<int> readSet(const CassValue* set) {
-    std::set<int> result;
+std::set<std::string> readSet(const CassValue* set) {
+    std::set<std::string> result;
 
     if (!set) {
         return result;
@@ -30,10 +30,12 @@ std::set<int> readSet(const CassValue* set) {
 
     while (cass_iterator_next(iterator)) {
         const CassValue* iter_value = cass_iterator_get_value(iterator);
-        cass_int32_t value;
+        CassUuid uuid_value;
 
-        if (cass_value_get_int32(iter_value, &value) == CASS_OK) {
-            result.insert(value);
+        if (cass_value_get_uuid(iter_value, &uuid_value) == CASS_OK) {
+            char uuid_str[CASS_UUID_STRING_LENGTH];
+            cass_uuid_string(uuid_value, uuid_str);
+            result.insert(std::string(uuid_str));
         }
     }
 

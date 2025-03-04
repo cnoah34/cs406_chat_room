@@ -1,12 +1,13 @@
 <template>
     <div class='home'>
-        <p class='left'>Left</p>
+        <RoomSelection class='left'/>
         <p class='right'>Right</p>
     </div>
 </template>
 
 
 <script setup>
+    import RoomSelection from '../components/RoomSelection.vue'
 </script>
 
 
@@ -14,10 +15,12 @@
 .home {
     display: flex;
     flex-direction: row;
+    height: 85vh;
 }
 
 .home .left {
-    margin-right: 20%;
+    padding-right: 100px;
+    border: 3px solid var(--vue-green);
 }
 
 .home .right {

@@ -8,7 +8,6 @@
 
 <script setup>
     import Login from '../components/Login.vue'
-    import { ref } from 'vue'
 </script>
 
 

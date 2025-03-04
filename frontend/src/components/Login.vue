@@ -44,8 +44,10 @@
     import axios from 'axios'
     import { useRouter } from 'vue-router'
     import { login } from '@/auth'
-
+    import { useApiStore } from '@/store/api'
+    
     const router = useRouter()
+    const apiStore = useApiStore()
 
     const isLogin = ref(true)
     const showPasswordRequirements = ref(false)
@@ -110,8 +112,8 @@
 
         try {
             const response = isLogin.value
-                ? await axios.post('http://localhost:8080/login', formData.value)
-                : await axios.post('http://localhost:8080/users', formData.value)
+                ? await axios.post(`${apiStore.rest_url}/login`, formData.value)
+                : await axios.post(`${apiStore.rest_url}/users`, formData.value)
 
             if (response.status == 200 || response.status == 204) {
                 result.value = {
@@ -156,9 +158,7 @@
     height: 50vh;
     width: 25vw;
     padding: 20px;
-    border: solid;
-    border-width: 3px;
-    border-color: var(--vue-green);
+    border: 3px solid var(--vue-green);
     background-color: var(--foreground);
 }
 

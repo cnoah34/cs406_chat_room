@@ -1,7 +1,6 @@
 <template>
     <div class='parent-container'> 
         <nav>
-            <router-link v-if='isAuthenticated' to='/home'>Home</router-link>
             <button v-if='isAuthenticated' @click='handleLogout'>Logout</button>
         </nav>
         <div class='content'>
@@ -29,6 +28,25 @@
 .parent-container {
     display: flex;
     flex-direction: column;
+}
+
+nav {
+    display: flex;
+    flex-direction: row-reverse;
+}
+
+button {
+    width: 80px;
+    font-size: 12pt;
+    background-color: var(--foreground);
+    border: 3px solid var(--vue-green);
+    color: white;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: var(--vue-green);
+    color: var(--foreground);
 }
 
 .content {

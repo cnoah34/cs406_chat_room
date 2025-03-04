@@ -1,16 +1,18 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
 
-export const useMessagesStore = defineStore('messages', () => {
-    const messages = ref([])
+export const useMessagesStore = defineStore('messages', {
+    state: () => ({
+        messages: []
+    }),
+    actions: {
+        setMessages(data) {
+            this.messages = data
+        }
 
-    function setMessages(data) {
-        messages.value = data
-    }
-
-    function clearMessages() {
-        messages.value = []
-    }
-
-    return { messages, setMessages, clearMessages }
+        clearMessages() {
+            this.messages = []
+            localStorage.removeItem('messages')
+        }
+    },
+    persist: true,
 })

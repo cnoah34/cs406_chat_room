@@ -110,22 +110,29 @@ void deleteMessage(const httplib::Request& req, httplib::Response& res, ChatRoom
 }
 
 void createMessage(const httplib::Request& req, httplib::Response& res, ChatRoomDB& database) {
-    if (!checkFields(req, res, {"room_id", "user_id", "content"})) {
+    std::string authHeader = req.get_header_value("Authorization");
+
+    std::optional<CassUuid> userUuidOpt = getUserIdFromToken(authHeader);
+    if (!userUuidOpt.has_value()) {
+        res.status = 401;
+        res.set_content(R"({"error": "Not authorized"})", "application/json");
+        return;
+    }
+
+    CassUuid user_uuid = userUuidOpt.value();
+
+    if (!checkFields(req, res, {"room_id", "content"})) {
         return;
     }
 
     const json body = json::parse(req.body);
 
     const std::string room_id = body["room_id"];
-    const std::string user_id = body["user_id"];
     const std::string content = body["content"];
 
     CassUuid room_uuid;
-    CassUuid user_uuid;
 
-    if (cass_uuid_from_string(room_id.c_str(), &room_uuid) != CASS_OK ||
-            cass_uuid_from_string(user_id.c_str(), &user_uuid) != CASS_OK) {
-
+    if (cass_uuid_from_string(room_id.c_str(), &room_uuid) != CASS_OK) {
         res.status = 400;
         res.set_content(R"({"error": "Invalid parameter format"})", "application/json");
         return;

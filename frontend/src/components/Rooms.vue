@@ -2,7 +2,7 @@
     <div class="rooms">
         <h1 style="color: white;">Your rooms</h1>
         <ul>
-            <li v-for="room in rooms" :key="room.id" @click="selectRoom(room)">
+            <li v-for="room in roomsStore.rooms" :key="room.room_id" @click="selectRoom(room)">
                 {{ room.name }}
             </li>
         </ul>
@@ -13,13 +13,12 @@
 <script setup>
     import { ref, onMounted } from 'vue'
     import { useUserStore } from '@/store/user'
-    import { useRoomStore } from '@/store/room'
+    import { useRoomsStore } from '@/store/rooms'
     import { useApiStore } from '@/store/api'
     import axios from 'axios'
 
-    const rooms = ref([])
     const userStore = useUserStore()
-    const roomStore = useRoomStore()
+    const roomsStore = useRoomsStore()
     const apiStore = useApiStore()
 
     const getRoom = async (room_id) => {
@@ -30,10 +29,10 @@
                 }
             })
 
-            if (response.status == 200) {
-                const room_data = response.data
-                room_data.room_id = room_id
-                rooms.value.push(room_data)
+            if (response.status == 200 && response.data) {
+                const room = response.data
+                room.room_id = room_id  // Query does not include room_id
+                roomsStore.addRoom(room)
             }
         }
         catch (error) {
@@ -42,12 +41,15 @@
     }
 
     const selectRoom = (room) => {
-        roomStore.setRoom(room)
+        roomsStore.setCurrentRoom(room)
     }
-onMounted(() => {
-        rooms.value = []
+
+    onMounted(() => {
         userStore.room_ids.forEach(room_id => {
-            getRoom(room_id)
+            // TODO: Add check to remove rooms user has been removed from
+            if (!roomsStore.rooms.some(room => room.room_id === room_id)) {
+                getRoom(room_id)
+            }
         })
     })
 </script>

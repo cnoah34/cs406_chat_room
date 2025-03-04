@@ -50,7 +50,7 @@ void getMessages(const httplib::Request& req, httplib::Response& res, ChatRoomDB
         return;
     }
 
-    const char* query = "SELECT user_id, content, created_at FROM chat.messages "
+    const char* query = "SELECT user_id, username, content, created_at FROM chat.messages "
         "WHERE room_id = ? AND created_at < minTimeuuid(?) "
         "ORDER BY created_at DESC LIMIT ?;";
 

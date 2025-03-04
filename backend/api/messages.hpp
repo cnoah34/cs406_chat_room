@@ -17,16 +17,15 @@ void getMessages(const httplib::Request& req, httplib::Response& res, ChatRoomDB
     std::string limit_str = req.has_param("limit") ? req.get_param_value("limit") : "50";
     int limit = stoi(limit_str);
 
-
     CassUuid room_uuid;
-    cass_int64_t before_timestamp;
-
     if (cass_uuid_from_string(room_id.c_str(), &room_uuid) != CASS_OK) {
         res.status = 400;
         res.set_content(R"({"error": "Invalid parameter 'room_id'"})", "application/json");
         return;
     }
 
+    // Most recent messages by default
+    cass_int64_t before_timestamp = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()) * 1000;
     if (!before.empty() && cassTimestampFromString(before.c_str(), &before_timestamp) != CASS_OK) {
         res.status = 400;
         res.set_content(R"({"error": "Invalid parameter 'before'"})", "application/json");

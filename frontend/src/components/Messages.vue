@@ -1,7 +1,12 @@
 <template>
     <div class="messages-container" @scroll="handleScroll">
         <ul>
+            <!--
             <li v-for="message in messagesStore.messages" :key="message.created_at">
+                <strong style="font-weight: bold;">{{ message.username }}</strong>: {{ message.content }}
+            </li>
+            -->
+            <li v-for="message in messages" :key="message.created_at">
                 <strong style="font-weight: bold;">{{ message.username }}</strong>: {{ message.content }}
             </li>
         </ul>
@@ -16,8 +21,10 @@
     import axios from 'axios'
 
     const roomsStore = useRoomsStore()
-    const messagesStore = useMessagesStore()
+    //const messagesStore = useMessagesStore()
     const apiStore = useApiStore()
+
+    const messages = ref([])
 
     const loading = ref(false)
     const hasMoreMessages = ref(true)
@@ -44,7 +51,8 @@
 
             // Prepend older messages
             if (response.data) {
-                messagesStore.setMessages([...response.data, ...messagesStore.messages])
+                //messagesStore.setMessages([...response.data.reverse(), ...messagesStore.messages])
+                messages.value = [...response.data.reverse(), ...messages.value]
             }
         }
         catch (error) {
@@ -59,7 +67,8 @@
         () => roomsStore.current_room,
         (new_room, old_room) => {
             if (new_room && new_room !== old_room) {
-                messagesStore.clearMessages()
+                //messagesStore.clearMessages()
+                messages.value = []
                 getMessages()
             }
         },
@@ -70,7 +79,9 @@
         const container = event.target
 
         if (container.scrollTop === 0 && hasMoreMessages.value && !loading.value) {
-            const oldestMessage = messagesStore.messages[0]
+            //const oldestMessage = messagesStore.messages[0]
+            const oldestMessage = messages.value[0]
+            
 
             if (oldestMessage) {
                 getMessages(oldestMessage.created_at)
@@ -79,7 +90,8 @@
     }
 
     onMounted(() => {
-        messagesStore.clearMessages()
+        //messagesStore.clearMessages()
+        messages.value = []
     })
 
 

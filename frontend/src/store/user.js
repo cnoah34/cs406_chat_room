@@ -4,7 +4,8 @@ export const useUserStore = defineStore('user', {
     state: () => ({
         username: null,
         created_at: null,
-        room_ids: []
+        room_ids: [],
+        current_room: null,
     }),
     actions: {
         setUser(data) {
@@ -15,7 +16,7 @@ export const useUserStore = defineStore('user', {
         clearUser() {
             this.$reset()
             localStorage.removeItem('user')
-        }
+        },
     },
     persist: true,
 })

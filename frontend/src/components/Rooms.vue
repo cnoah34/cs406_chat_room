@@ -2,7 +2,7 @@
     <div class="rooms">
         <h1 style="color: white;">Your rooms</h1>
         <ul>
-            <li v-for="room in roomsStore.rooms" :key="room.room_id" @click="selectRoom(room)">
+            <li v-for="room in rooms" :key="room.room_id" @click="selectRoom(room)">
                 {{ room.name }}
             </li>
         </ul>
@@ -13,13 +13,13 @@
 <script setup>
     import { ref, onMounted } from 'vue'
     import { useUserStore } from '@/store/user'
-    import { useRoomsStore } from '@/store/rooms'
     import { useApiStore } from '@/store/api'
     import axios from 'axios'
 
     const userStore = useUserStore()
-    const roomsStore = useRoomsStore()
     const apiStore = useApiStore()
+
+    const rooms = ref([])
 
     const getRoom = async (room_id) => {
         try {
@@ -32,7 +32,13 @@
             if (response.status == 200 && response.data) {
                 const room = response.data
                 room.room_id = room_id  // Query does not include room_id
-                roomsStore.addRoom(room)
+                rooms.value.push(room) 
+
+                rooms.value.sort((a, b) => {
+                    if (a.name < b.name) return -1;
+                    if (a.name > b.name) return 1;
+                    return 0;
+                });
             }
         }
         catch (error) {
@@ -41,15 +47,16 @@
     }
 
     const selectRoom = (room) => {
-        roomsStore.setCurrentRoom(room)
+        userStore.current_room = room
     }
 
     onMounted(() => {
+        rooms.value = []
+        
+        // Query rooms here
+
         userStore.room_ids.forEach(room_id => {
-            // TODO: Add check to remove rooms user has been removed from
-            if (!roomsStore.rooms.some(room => room.room_id === room_id)) {
-                getRoom(room_id)
-            }
+            getRoom(room_id)
         })
     })
 </script>

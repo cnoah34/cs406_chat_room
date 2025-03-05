@@ -1,27 +1,32 @@
 <template>
-    <div class="messages-container" @scroll="handleScroll">
-        <ul>
-            <!--
-            <li v-for="message in messagesStore.messages" :key="message.created_at">
-                <strong style="font-weight: bold;">{{ message.username }}</strong>: {{ message.content }}
-            </li>
-            -->
-            <li v-for="message in messages" :key="message.created_at">
-                <strong style="font-weight: bold;">{{ message.username }}</strong>: {{ message.content }}
-            </li>
-        </ul>
+    <div class="container">
+        <div class="messages-container" @scroll="handleScroll">
+            <p v-if="!userStore.current_room" class="placeholder">Choose a room</p>
+
+            <p v-else-if="userStore.current_room && !loading.value && !messages.length"
+               class="placeholder">
+            There are no messages, be the first!
+            </p>
+
+            <ul>
+                <li v-for="message in messages" :key="message.created_at">
+                    <strong style="font-weight: bold;">{{ message.username }}</strong>: {{ message.content }}
+                </li>
+            </ul>
+        </div>
+
+        <TypingBar class="typing-bar"/>        
     </div>
 </template>
 
 <script setup>
     import { ref, onMounted, watch } from 'vue'
-    import { useRoomsStore } from '@/store/rooms'
-    import { useMessagesStore } from '@/store/messages'
     import { useApiStore } from '@/store/api'
+    import { useUserStore } from '@/store/user'
+    import TypingBar from './TypingBar.vue'
     import axios from 'axios'
 
-    const roomsStore = useRoomsStore()
-    //const messagesStore = useMessagesStore()
+    const userStore = useUserStore()
     const apiStore = useApiStore()
 
     const messages = ref([])
@@ -31,15 +36,16 @@
 
     const getMessages = async (before = null) => {
         try {
-            if (!roomsStore.current_room.room_id) {
+            if (!userStore.current_room.room_id) {
                 return
             }
 
             loading.value = true
 
             const url = before
-            ? `${apiStore.rest_url}/messages/${roomsStore.current_room.room_id}?before=${before}&limit=3`
-            : `${apiStore.rest_url}/messages/${roomsStore.current_room.room_id}?limit=3`
+            ?
+            `${apiStore.rest_url}/messages/${userStore.current_room.room_id}?limit=30&before=${before}`
+            : `${apiStore.rest_url}/messages/${userStore.current_room.room_id}?limit=30`
 
             const response = await axios.get(url, {
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
@@ -51,12 +57,13 @@
 
             // Prepend older messages
             if (response.data) {
-                //messagesStore.setMessages([...response.data.reverse(), ...messagesStore.messages])
                 messages.value = [...response.data.reverse(), ...messages.value]
             }
         }
         catch (error) {
-            console.error('Error fetching messages: ', error)
+            if (error.status != 404) {
+                console.error('Error fetching messages: ', error)
+            }
         }
         finally {
             loading.value = false
@@ -64,10 +71,9 @@
     }
 
     watch(
-        () => roomsStore.current_room,
+        () => userStore.current_room,
         (new_room, old_room) => {
             if (new_room && new_room !== old_room) {
-                //messagesStore.clearMessages()
                 messages.value = []
                 getMessages()
             }
@@ -78,10 +84,9 @@
     const handleScroll = (event) => {
         const container = event.target
 
+        // TODO: Fix created_at being a uuid, maybe change schema
         if (container.scrollTop === 0 && hasMoreMessages.value && !loading.value) {
-            //const oldestMessage = messagesStore.messages[0]
             const oldestMessage = messages.value[0]
-            
 
             if (oldestMessage) {
                 getMessages(oldestMessage.created_at)
@@ -90,7 +95,6 @@
     }
 
     onMounted(() => {
-        //messagesStore.clearMessages()
         messages.value = []
     })
 
@@ -99,11 +103,30 @@
 
 
 <style scoped>
+.container {
+    display: flex;
+    flex-direction: column;
+}
+
 .messages-container {
-    height: 500px;
+    display: flex;
+    flex-direction: column-reverse;
+    flex-grow: 1;
     overflow-y: auto;
-    border: 1px solid var(--vue-green);
-    padding: 10px;
+    margin-top: 30px;
+}
+
+.typing-bar {
+    border-top: 3px solid var(--vue-green);
+    margin-top: 30px;
+}
+
+.placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 80%;
+    font-size: 20pt;
 }
 
 ul {

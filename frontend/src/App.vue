@@ -24,7 +24,7 @@
 </script>
 
 
-<style>
+<style scoped>
 .parent-container {
     display: flex;
     flex-direction: column;

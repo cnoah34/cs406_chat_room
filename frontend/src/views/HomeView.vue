@@ -1,5 +1,5 @@
 <template>
-    <div class='home'>
+    <div class="home">
         <Rooms class="left" />
         <Messages class="right" />
     </div>
@@ -20,9 +20,9 @@
 }
 
 .home .left {
+    height: 100%;
     padding-right: 100px;
     border: 3px solid var(--vue-green);
-    height: 100%
 }
 
 .home .right {

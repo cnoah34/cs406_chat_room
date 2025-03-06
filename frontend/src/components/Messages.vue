@@ -77,6 +77,7 @@
         (new_room, old_room) => {
             if (new_room && new_room !== old_room) {
                 messages.value = []
+                has_more_messages.value = true
                 getMessages()
             }
         },
@@ -86,10 +87,13 @@
     const handleScroll = (event) => {
         const container = event.target
 
-        // TODO: Fix created_at being a uuid, maybe change schema
-        if (container.scrollTop === 0 && has_more_messages.value && !loading.value) {
+        const scrollbar_position = Math.abs(container.scrollTop) + container.clientHeight + 50
+        const scroll_height = container.scrollHeight
+
+        if (has_more_messages.value && !loading.value &&
+            scrollbar_position >= scroll_height) {
+
             const oldest_message = messages.value[0]
-            console.log(oldest_message)
 
             if (oldest_message) {
                 getMessages(oldest_message.created_at)
@@ -113,16 +117,25 @@
 
 .messages-container {
     display: flex;
-    flex-direction: column;
+    flex-direction: column-reverse;
     flex-grow: 1;
+    margin-bottom: 20px;
+    padding-right: 30px;
     overflow-y: auto;
-    margin-top: 30px;
+    scrollbar-color: white var(--foreground);
+}
+
+.messages-container::-webkit-scrollbar-thumb {
+    background: white;
+}
+
+.messages-container::-webkit-scrollbar-track {
+    background: var(--foreground);
 }
 
 .typing-bar {
     flex-shrink: 0;
     border-top: 3px solid var(--vue-green);
-    margin-top: 30px;
 }
 
 .placeholder {

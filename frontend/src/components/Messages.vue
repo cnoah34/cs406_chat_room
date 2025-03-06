@@ -120,6 +120,7 @@
 }
 
 .typing-bar {
+    flex-shrink: 0;
     border-top: 3px solid var(--vue-green);
     margin-top: 30px;
 }

@@ -1,6 +1,6 @@
 <template>
-    <div class="bar">
-        <form @submit.prevent="sendMessage" autocomplete="off">
+    <div>
+        <form @submit.prevent="sendMessage" autocomplete="off" class="bar">
             <input type="text" id="content" v-model="content"
                    placeholder="Type a message..." />
             <button type="submit">Send</button>
@@ -47,19 +47,18 @@
 
 <style scoped>
 .bar {
+    min-height: 60px;
     display: flex;
     flex-direction: row;
-    align-items: center;
-    width: 100;
-    min-height: 60px;
+    align-items: stretch;
 }
 
 input {
+    font-size: 14pt;
     flex-grow: 1;
-    min-height: 60px;
+    justify-content: stretch;
     padding-left: 30px;
     color: white;
-    font-size: 14pt;
     background-color: var(--foreground);
     border: none;
 }
@@ -69,18 +68,18 @@ input:focus {
 }
 
 button {
+    font-size: 14pt;
+    min-width: 90px;
+    color: white;
+    cursor: pointer;
     background-color: var(--foreground);
     border: none;
     border-left: 3px solid var(--vue-green);
-    border-right: 3px solid var(--vue-green);
-    color: white;
-    cursor: pointer;
-    font-size: 14pt;
-    min-height: 60px;
 }
 
 button:hover {
     background-color: var(--vue-green);
+    color: var(--foreground);
 }
 
 </style>

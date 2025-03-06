@@ -21,7 +21,7 @@
 
 .home .left {
     height: 100%;
-    padding-right: 100px;
+    min-width: 300px;
     border: 3px solid var(--vue-green);
 }
 

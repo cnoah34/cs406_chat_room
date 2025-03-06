@@ -120,7 +120,6 @@
     flex-direction: column-reverse;
     flex-grow: 1;
     margin-bottom: 20px;
-    padding-right: 30px;
     overflow-y: auto;
     scrollbar-color: white var(--foreground);
 }
@@ -139,22 +138,20 @@
 }
 
 .placeholder {
+    font-size: 20pt;
     display: flex;
     align-items: center;
     justify-content: center;
     height: 80%;
-    font-size: 20pt;
-}
-
-ul {
-    list-style-type: none;
-    margin: 0;
-    color: white;
-    font-size: 14pt;
 }
 
 li {
+    font-size: 14pt;
+    list-style-type: none;
+    color: white;
     margin-top: 10px;
+    padding-right: 20px;
+    word-break: break-word;
 }
 
 

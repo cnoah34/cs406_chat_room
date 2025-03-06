@@ -4,11 +4,9 @@
 // Compile with: g++ connect.cpp [-L <dir_containing_libscylla-cpp-driver.so> -Wl,-rpath,<dir_containing_libscylla-cpp-driver.so> -I <path_to_cassandra.h>] -lscylla-cpp-driver -o connect
 #include <cpp-driver/include/cassandra.h>
 #include <iostream>
+#include <time.h>
 #include <chrono>
-#include <ctime>
-#include <iomanip>
 #include <sstream>
-#include <map>
 #include <set>
 
 #include <nlohmann/json.hpp>
@@ -54,7 +52,7 @@ CassError cassTimestampFromString(const char* time_string, cass_int64_t* output)
         return CASS_ERROR_LIB_BAD_PARAMS;
     }
 
-    time_t time_c = std::mktime(&tm_time);
+    time_t time_c = timegm(&tm_time);
 
     if (time_c == -1) {
         return CASS_ERROR_LIB_BAD_PARAMS;

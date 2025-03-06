@@ -89,6 +89,7 @@
         // TODO: Fix created_at being a uuid, maybe change schema
         if (container.scrollTop === 0 && has_more_messages.value && !loading.value) {
             const oldest_message = messages.value[0]
+            console.log(oldest_message)
 
             if (oldest_message) {
                 getMessages(oldest_message.created_at)
@@ -112,7 +113,7 @@
 
 .messages-container {
     display: flex;
-    flex-direction: column-reverse;
+    flex-direction: column;
     flex-grow: 1;
     overflow-y: auto;
     margin-top: 30px;

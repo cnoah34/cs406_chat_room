@@ -32,7 +32,7 @@
     const messages = ref([])
 
     const loading = ref(false)
-    const hasMoreMessages = ref(true)
+    const has_more_messages = ref(true)
 
     const getMessages = async (before = null) => {
         try {
@@ -41,18 +41,20 @@
             }
 
             loading.value = true
+            
+            const limit = 20
 
             const url = before
             ?
-            `${apiStore.rest_url}/messages/${userStore.current_room.room_id}?limit=30&before=${before}`
-            : `${apiStore.rest_url}/messages/${userStore.current_room.room_id}?limit=30`
+            `${apiStore.rest_url}/messages/${userStore.current_room.room_id}?limit=${limit}&before=${before}`
+            : `${apiStore.rest_url}/messages/${userStore.current_room.room_id}?limit=${limit}`
 
             const response = await axios.get(url, {
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
             })
 
-            if (response.data.length < 20) {
-                hasMoreMessages.value = false
+            if (response.data.length < limit) {
+                has_more_messages.value = false
             }
 
             // Prepend older messages
@@ -85,11 +87,11 @@
         const container = event.target
 
         // TODO: Fix created_at being a uuid, maybe change schema
-        if (container.scrollTop === 0 && hasMoreMessages.value && !loading.value) {
-            const oldestMessage = messages.value[0]
+        if (container.scrollTop === 0 && has_more_messages.value && !loading.value) {
+            const oldest_message = messages.value[0]
 
-            if (oldestMessage) {
-                getMessages(oldestMessage.created_at)
+            if (oldest_message) {
+                getMessages(oldest_message.created_at)
             }
         }
     }

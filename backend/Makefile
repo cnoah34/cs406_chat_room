@@ -17,7 +17,7 @@ INCLUDE=-I./include \
 SCYLLA_LIB=./include/cpp-driver/build/libscylla-cpp-driver.so -Wl,-rpath,./include/cpp-driver/build/
 
 # Linking these
-LIBS=-lbcrypt -lssl -lcrypto
+LIBS=-lbcrypt -lcrypto -lssl 
 
 # For VCPKG installed libraries
 LDFLAGS=-L$(VCPKG_LIB)

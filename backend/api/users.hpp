@@ -3,7 +3,6 @@
 
 #include <libbcrypt/include/bcrypt/BCrypt.hpp>
 
-// Custom
 #include <commonFunctions.hpp>
 
 

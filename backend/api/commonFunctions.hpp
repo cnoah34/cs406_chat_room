@@ -4,9 +4,9 @@
 #include <vector>
 #include <string>
 #include <optional>
-#include <jwt-cpp/jwt.h>
 
 #include <nlohmann/json.hpp>
+#include <jwt-cpp/jwt.h>
 #include <cpp-httplib/httplib.h>
 
 #include <chatDB.hpp>

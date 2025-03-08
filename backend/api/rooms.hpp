@@ -3,55 +3,26 @@
 
 #include <commonFunctions.hpp>
 
-/*
-void getRoomDetails(const httplib::Request& req, httplib::Response& res, ChatRoomDB& database) {
-    std::string authHeader = req.get_header_value("Authorization");
-
-    std::optional<CassUuid> userUuidOpt = getUserIdFromToken(authHeader);
-    if (!userUuidOpt.has_value()) {
-        res.status = 401;
-        res.set_content(R"({"error": "Not authorized"})", "application/json");
-        return;
-    }
-
-    CassUuid user_uuid = userUuidOpt.value();
-
-    const std::string room_id = req.path_params.at("room_id");
-
-    if (room_id.empty()) {
-        res.status = 400;
-        res.set_content(R"({"error": "Missing required fields"})", "application/json");
-        return;
-    }
-
-    CassUuid room_uuid;
-
-    if (cass_uuid_from_string(room_id.c_str(), &room_uuid) != CASS_OK) {
-        res.status = 400;
-        res.set_content(R"({"error": "Invalid parameter format"})", "application/json");
-        return;
-    }
-
+json getRoomDetails(ChatRoomDB& database, const CassUuid& room_id) {
     const char* query = "SELECT name, created_at FROM chat.rooms "
-        "WHERE user_ids CONTAINS ? AND room_id = ?;";
+        "WHERE room_id = ?;";
 
-    CassStatement* statement = cass_statement_new(query, 2);
-    cass_statement_bind_uuid(statement, 0, user_uuid);
-    cass_statement_bind_uuid(statement, 1, room_uuid);
+    CassStatement* statement = cass_statement_new(query, 1);
+    cass_statement_bind_uuid(statement, 0, room_id);
 
     const json result = database.SelectQuery(statement);
 
     if (result.empty()) {
-        res.status = 404;
-        res.set_content(R"({"error": "No room found"})", "application/json");
-        return;
+        return { 
+            { "error", "Room does not exist" }, 
+            { "code", 404 } 
+        };
     }
 
-    res.status = 200;
-    res.set_content(result[0].dump(), "application/json");
-    return;
+    return result[0];
 }
 
+/*
 void removeAdmin(const httplib::Request& req, httplib::Response& res, ChatRoomDB& database) {
     const json body = json::parse(req.body);
 
@@ -310,13 +281,33 @@ void createRoom(const httplib::Request& req, httplib::Response& res, ChatRoomDB 
 */
 
 void defineRoomMethods(httplib::Server& svr, ChatRoomDB& database) {
-    /*
     // Get details of a room
     svr.Get("/rooms/:room_id/", [&database](const httplib::Request& req, httplib::Response& res) {
-        getRoomDetails(req, res, database);
+        const std::string room_id = req.path_params.at("room_id");
+        CassUuid room_uuid;
+
+        if (room_id.empty() || cass_uuid_from_string(room_id.c_str(), &room_uuid ) != CASS_OK) {
+            res.status = 400;
+            res.set_content(R"({"error": "Missing required fields"})", "application/json");
+            return;
+        }
+
+        json result = getRoomDetails(database, room_uuid);
+
+        if (result.contains("error")) {
+            json error = {{ "error", result["error"] }};
+            res.status = result["code"];
+            res.set_content(error.dump(), "application/json");
+        }
+        else {
+            res.status = 200;
+            res.set_content(result.dump(), "application/json");
+        }
+
         setCommonHeaders(res);
     });
 
+    /*
     // Remove admin
     svr.Patch("/rooms/remove_admin", [&database](const httplib::Request& req, httplib::Response& res) {
         removeAdmin(req, res, database);

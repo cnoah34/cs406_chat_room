@@ -23,31 +23,17 @@ void setCommonHeaders(httplib::Response& res) {
     return;
 }
 
-bool checkFields(const httplib::Request& req, httplib::Response& res, const std::vector<std::string>& required_fields) {
-    json requestBody = json::parse(req.body);
-    json missing_fields = json::array();
-
+bool hasFields(const json& body, const std::vector<std::string>& required_fields) {
     for (const auto& field : required_fields) {
-        if (!requestBody.contains(field)) {
-            missing_fields.push_back(field);
+        if (!body.contains(field)) {
+            return false;
         }
-    }
-
-    if (!missing_fields.empty()) {
-        json responseBody;
-        responseBody["error"] = "Missing required field(s)";
-        responseBody["missing_fields"] = missing_fields;
-
-        res.status = 400;
-        res.set_content(responseBody.dump(), "application/json");
-
-        return false;
     }
 
     return true;
 }
 
-std::optional<CassUuid> getUserIdFromToken(std::string& authHeader) {
+std::optional<CassUuid> getUserIdFromToken(const std::string& authHeader) {
     if (authHeader.empty() || authHeader.find("Bearer ") != 0) {
         return std::nullopt;
     }
@@ -95,7 +81,7 @@ std::optional<CassUuid> getUserIdFromToken(std::string& authHeader) {
     return std::nullopt;
 }
 
-bool userInRoom(ChatRoomDB& database, CassUuid user_uuid, CassUuid room_uuid) {
+bool userInRoom(ChatRoomDB& database, const CassUuid& user_uuid, const CassUuid& room_uuid) {
     const char* query = "SELECT COUNT(*) FROM chat.rooms WHERE room_id = ? AND user_ids CONTAINS ?;";
     CassStatement* statement = cass_statement_new(query, 2);
     cass_statement_bind_uuid(statement, 0, room_uuid);

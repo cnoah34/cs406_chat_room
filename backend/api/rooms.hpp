@@ -3,7 +3,7 @@
 
 #include <commonFunctions.hpp>
 
-
+/*
 void getRoomDetails(const httplib::Request& req, httplib::Response& res, ChatRoomDB& database) {
     std::string authHeader = req.get_header_value("Authorization");
 
@@ -53,11 +53,14 @@ void getRoomDetails(const httplib::Request& req, httplib::Response& res, ChatRoo
 }
 
 void removeAdmin(const httplib::Request& req, httplib::Response& res, ChatRoomDB& database) {
-    if (!checkFields(req, res, {"room_id", "user_id"})) {
+    const json body = json::parse(req.body);
+
+    if (!hasFields(body, { "room_id", "user_id" })) {
+        res.status = 400; 
+        res.set_content(R"({"error": "Missing required fields"})", "application/json");
         return;
     }
 
-    json body = json::parse(req.body);
     const std::string room_id = body["room_id"];
     const std::string user_id = body["user_id"];
 
@@ -88,11 +91,14 @@ void removeAdmin(const httplib::Request& req, httplib::Response& res, ChatRoomDB
 }
 
 void makeUserAdmin(const httplib::Request& req, httplib::Response& res, ChatRoomDB& database) {
-    if (!checkFields(req, res, {"room_id", "user_id"})) {
+    const json body = json::parse(req.body);
+
+    if (!hasFields(body, { "room_id", "user_id" })) {
+        res.status = 400; 
+        res.set_content(R"({"error": "Missing required fields"})", "application/json");
         return;
     }
 
-    json body = json::parse(req.body);
     const std::string room_id = body["room_id"];
     const std::string user_id = body["user_id"];
 
@@ -123,11 +129,14 @@ void makeUserAdmin(const httplib::Request& req, httplib::Response& res, ChatRoom
 }
 
 void removeUserFromRoom(const httplib::Request& req, httplib::Response& res, ChatRoomDB& database) {
-    if (!checkFields(req, res, {"room_id", "user_id"})) {
+    const json body = json::parse(req.body);
+
+    if (!hasFields(body, { "room_id", "user_id" })) {
+        res.status = 400; 
+        res.set_content(R"({"error": "Missing required fields"})", "application/json");
         return;
     }
 
-    json body = json::parse(req.body);
     const std::string room_id = body["room_id"];
     const std::string user_id = body["user_id"];
 
@@ -167,11 +176,14 @@ void removeUserFromRoom(const httplib::Request& req, httplib::Response& res, Cha
 }
 
 void addUserToRoom(const httplib::Request& req, httplib::Response& res, ChatRoomDB& database) {
-    if (!checkFields(req, res, {"room_id", "user_id"})) {
+    const json body = json::parse(req.body);
+
+    if (!hasFields(body, { "room_id", "user_id" })) {
+        res.status = 400; 
+        res.set_content(R"({"error": "Missing required fields"})", "application/json");
         return;
     }
 
-    json body = json::parse(req.body);
     const std::string room_id = body["room_id"];
     const std::string user_id = body["user_id"];
 
@@ -254,12 +266,6 @@ void createRoom(const httplib::Request& req, httplib::Response& res, ChatRoomDB 
 
     CassUuid user_uuid = userUuidOpt.value();
 
-    if (!checkFields(req, res, {"name"})) {
-        return;
-    }
-
-    const json body = json::parse(req.body);
-    const std::string name = body["name"];
 
     CassCollection* admin_set = cass_collection_new(CASS_COLLECTION_TYPE_LIST, 1);
     cass_collection_append_uuid(admin_set, user_uuid);
@@ -301,8 +307,10 @@ void createRoom(const httplib::Request& req, httplib::Response& res, ChatRoomDB 
     res.status = 204;
     return;
 }
+*/
 
 void defineRoomMethods(httplib::Server& svr, ChatRoomDB& database) {
+    /*
     // Get details of a room
     svr.Get("/rooms/:room_id/", [&database](const httplib::Request& req, httplib::Response& res) {
         getRoomDetails(req, res, database);
@@ -341,9 +349,20 @@ void defineRoomMethods(httplib::Server& svr, ChatRoomDB& database) {
 
     // Create room
     svr.Post("/rooms", [&database](const httplib::Request& req, httplib::Response& res) {
+        const json body = json::parse(req.body);
+
+        if (!hasFields(body, { "name" })) {
+            res.status = 400; 
+            res.set_content(R"({"error": "Missing required fields"})", "application/json");
+            return;
+        }
+
+        const std::string name = body["name"];
+
         createRoom(req, res, database);
         setCommonHeaders(res);
     });
+    */
     
     return;
 }

@@ -30,7 +30,7 @@ std::string createJwtToken(std::string user_id) {
     return token; 
 }
 
-std::string getUserIdFromUsername(ChatRoomDB& database, std::string username) {
+std::string getUserIdFromUsername(ChatRoomDB& database, const std::string username) {
     const char* query = "SELECT user_id FROM chat.users WHERE username = ?";
     CassStatement* statement = cass_statement_new(query, 1);
     cass_statement_bind_string(statement, 0, username.c_str());
@@ -142,7 +142,7 @@ json verifyUser(ChatRoomDB& database, const std::string& username, const std::st
     return {{ "token", token }};
 }
 
-json deleteUser(ChatRoomDB& database, CassUuid user_id) { 
+json deleteUser(ChatRoomDB& database, const CassUuid user_id) { 
     const char* query = "DELETE FROM chat.users WHERE user_id = ?;";
     CassStatement* statement = cass_statement_new(query, 1);
     cass_statement_bind_uuid(statement, 0, user_id);
@@ -233,11 +233,14 @@ void defineUserMethods(httplib::Server& svr, ChatRoomDB& database) {
     });
 
     svr.Post("/users", [&database](const httplib::Request& req, httplib::Response& res) {
-        if (!checkFields(req, res, {"username", "password"})) {
+        const json body = json::parse(req.body);
+
+        if (!hasFields(body, { "username", "password" })) {
+            res.status = 400; 
+            res.set_content(R"({"error": "Missing required fields"})", "application/json");
             return;
         }
 
-        const json body = json::parse(req.body);
         const std::string username = body["username"];
         const std::string password = body["password"];
 
@@ -256,11 +259,14 @@ void defineUserMethods(httplib::Server& svr, ChatRoomDB& database) {
     });
 
     svr.Post("/login", [&database](const httplib::Request& req, httplib::Response& res) {
-        if (!checkFields(req, res, {"username", "password"})) {
+        const json body = json::parse(req.body);
+
+        if (!hasFields(body, { "username", "password" })) {
+            res.status = 400; 
+            res.set_content(R"({"error": "Missing required fields"})", "application/json");
             return;
         }
 
-        const json body = json::parse(req.body);
         const std::string username = body["username"];
         const std::string provided_password = body["password"];
 

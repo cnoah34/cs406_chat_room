@@ -44,38 +44,7 @@ std::string getUserIdFromUsername(ChatRoomDB& database, std::string username) {
     return result[0]["user_id"];
 }
 
-void getUserDetails(const httplib::Request& req, httplib::Response& res, ChatRoomDB& database) {
-    std::string authHeader = req.get_header_value("Authorization");
-
-    std::optional<CassUuid> userUuidOpt = getUserIdFromToken(authHeader);
-    if (!userUuidOpt.has_value()) {
-        res.status = 401;
-        res.set_content(R"({"error": "Not authorized"})", "application/json");
-        return;
-    }
-
-    CassUuid user_uuid = userUuidOpt.value();
-
-    // Query
-    const char* query = "SELECT username, room_ids, created_at FROM chat.users WHERE user_id = ?;"; 
-
-    CassStatement* statement = cass_statement_new(query, 1);
-    cass_statement_bind_uuid(statement, 0, user_uuid);
-
-    const json result = database.SelectQuery(statement);
-
-    if (result.empty()) {
-        res.status = 404;
-        res.set_content(R"({"error": "User could not be found"})", "application/json");
-        return;
-    }
-
-    res.status = 200;
-    res.set_content(result[0].dump(), "application/json");
-    return;
-}
-
-int userExists(httplib::Response& res, ChatRoomDB& database, const std::string username) {
+int userExists(ChatRoomDB& database, const std::string& username) {
     const char* user_exists_query = "SELECT COUNT(*) FROM chat.users WHERE username = ?;"; 
     CassStatement* user_exists_statement = cass_statement_new(user_exists_query, 1);
     cass_statement_bind_string(user_exists_statement, 0, username.c_str());
@@ -84,32 +53,41 @@ int userExists(httplib::Response& res, ChatRoomDB& database, const std::string u
 
     if (user_exists_result.empty() || !user_exists_result[0].contains("count")) {
         // Failed to determine if user exists
-        res.status = 500;
-        res.set_content(R"({"error": "Internal server error"})", "application/json");
-        return -1;  // -1 because we don't know
+        return -1;
     }
     else if (user_exists_result[0]["count"] == 0) {
         // User does not exist
         return 0;
     }
 
+    // User exists
     return 1;
 }
 
-void verifyUser(const httplib::Request& req, httplib::Response& res, ChatRoomDB& database) {
-    if (!checkFields(req, res, {"username", "password"})) {
-        return;
+json getUserDetails(ChatRoomDB& database, const CassUuid& user_id) {
+    const char* query = "SELECT username, room_ids, created_at FROM chat.users WHERE user_id = ?;"; 
+
+    CassStatement* statement = cass_statement_new(query, 1);
+    cass_statement_bind_uuid(statement, 0, user_id);
+
+    const json result = database.SelectQuery(statement);
+
+    if (result.empty()) {
+        return { 
+            { "error", "No user found" }, 
+            { "code", 404 } 
+        };
     }
 
-    const json body = json::parse(req.body);
-    const std::string username = body["username"];
-    const std::string provided_password = body["password"];
+    return result;
+}
 
-    // No user with username
-    if (userExists(res, database, username) != 1) {
-        res.status = 401;
-        res.set_content(R"({"error": "Incorrect username or password"})", "application/json");
-        return;
+json verifyUser(ChatRoomDB& database, const std::string& username, const std::string& provided_password) {
+    if (userExists(database, username) != 1) {
+        return { 
+            { "error", "Incorrect username or password" }, 
+            { "code", 401 } 
+        };
     }
     
     const char* credentials_query = "SELECT password, salt FROM chat.users WHERE username = ?;";
@@ -118,11 +96,12 @@ void verifyUser(const httplib::Request& req, httplib::Response& res, ChatRoomDB&
 
     const json credentials_result = database.SelectQuery(credentials_statement);
 
+    // Failed to get user credentials
     if (credentials_result.empty() || !credentials_result[0].contains("password") || !credentials_result[0].contains("salt")) {
-        // Failed to get user credentials
-        res.status = 500;
-        res.set_content(R"({"error": "Internal server error"})", "application/json");
-        return;
+        return { 
+            { "error", "Internal server error" }, 
+            { "code", 500 } 
+        };
     }
 
     char hash[BCRYPT_HASHSIZE];
@@ -134,83 +113,56 @@ void verifyUser(const httplib::Request& req, httplib::Response& res, ChatRoomDB&
 
     int ret = bcrypt_hashpw(provided_password.c_str(), salt, hash);
     if (ret != 0) {
-        res.status = 500;
-        res.set_content(R"({"error": "Internal server error"})", "application/json");
-        return;
+        return { 
+            { "error", "Internal server error" }, 
+            { "code", 500 } 
+        };
     }
 
     const std::string hashed_provided_pw(hash); 
 
     // Compare hash created with provided password to database hash
     if (hashed_provided_pw != credentials_result[0]["password"]) {
-        // Password does not match
-        res.status = 401;
-        res.set_content(R"({"error": "Incorrect username or password"})", "application/json");
-        return;
+        return { 
+            { "error", "Incorrect username or password" }, 
+            { "code", 401 } 
+        };
     }
 
     // Create a JWT
-    std::string token = createJwtToken(getUserIdFromUsername(database, username));
+    const std::string token = createJwtToken(getUserIdFromUsername(database, username));
 
     if (token.empty()) {
-        res.status = 500;
-        res.set_content(R"({"error": "Failed to create JWT token"})", "application/json");
-        return;
+        return { 
+            { "error", "Failed to create token" }, 
+            { "code", 500 } 
+        };
     }
     
-    res.status = 200;
-    res.set_header("Content-Type", "application/json");
-    res.body = "{\"token\":\"" + token + "\"}";
-    return;
+    return {{ "token", token }};
 }
 
-void deleteUser(const httplib::Request& req, httplib::Response& res, ChatRoomDB& database) { 
-    // Verify params
-    const std::string user_id = req.path_params.at("user_id");
-
-    if (user_id.empty()) {
-        res.status = 400;
-        res.set_content(R"({"error": "Missing required fields"})", "application/json");
-        return;
-    }
-
-    CassUuid user_uuid;
-
-    if (cass_uuid_from_string(user_id.c_str(), &user_uuid) != CASS_OK) {
-        res.status = 400;
-        res.set_content(R"({"error": "Invalid parameter format"})", "application/json");
-        return;
-    }
-
-    // Query
+json deleteUser(ChatRoomDB& database, CassUuid user_id) { 
     const char* query = "DELETE FROM chat.users WHERE user_id = ?;";
     CassStatement* statement = cass_statement_new(query, 1);
-    cass_statement_bind_uuid(statement, 0, user_uuid);
+    cass_statement_bind_uuid(statement, 0, user_id);
 
     if (!database.ModifyQuery(statement)) {
-        res.status = 500;
-        res.set_content(R"({"error": "Internal server error"})", "application/json");
-        return;
+        return { 
+            { "error", "Internal server error" }, 
+            { "code", 500 } 
+        };
     }
 
-    res.status = 204;
-    return;
+    return {};
 }
 
-void createUser(const httplib::Request& req, httplib::Response& res, ChatRoomDB& database) {
-    if (!checkFields(req, res, {"username", "password"})) {
-        return;
-    }
-
-    const json body = json::parse(req.body);
-    const std::string username = body["username"];
-    const std::string password = body["password"];
-
-    // User with username already exists
-    if (userExists(res, database, username) != 0) {
-        res.status = 401;
-        res.set_content(R"({"error": "User with same username exists"})", "application/json");
-        return;
+json createUser(ChatRoomDB& database, const std::string& username, const std::string& password) {
+    if (userExists(database, username) != 0) {
+        return { 
+            { "error", "User with same username exists" }, 
+            { "code", 400 } 
+        };
     }
 
     char salt[BCRYPT_HASHSIZE];
@@ -219,16 +171,18 @@ void createUser(const httplib::Request& req, httplib::Response& res, ChatRoomDB&
 
     ret = bcrypt_gensalt(12, salt);
     if (ret != 0) {
-        res.status = 500;
-        res.set_content(R"({"error": "Internal server error"})", "application/json");
-        return;
+        return { 
+            { "error", "Internal server error" }, 
+            { "code", 500 } 
+        };
     }
 
     ret = bcrypt_hashpw(password.c_str(), salt, hash);
     if (ret != 0) {
-        res.status = 500;
-        res.set_content(R"({"error": "Internal server error"})", "application/json");
-        return;
+        return { 
+            { "error", "Internal server error" }, 
+            { "code", 500 } 
+        };
     }
 
     const char* insert_query = 
@@ -241,33 +195,116 @@ void createUser(const httplib::Request& req, httplib::Response& res, ChatRoomDB&
     cass_statement_bind_string(insert_statement, 2, salt);
 
     if (!database.ModifyQuery(insert_statement)) {
-        res.status = 500;
-        res.set_content(R"({"error": "Internal server error"})", "application/json");
-        return;
+        return { 
+            { "error", "Internal server error" }, 
+            { "code", 500 } 
+        };
     }
 
-    res.status = 204;
-    return;
+    return {};
 }
 
 void defineUserMethods(httplib::Server& svr, ChatRoomDB& database) {
     svr.Get("/users/metadata", [&database](const httplib::Request& req, httplib::Response& res) {
-        getUserDetails(req, res, database);
+        std::string authHeader = req.get_header_value("Authorization");
+
+        std::optional<CassUuid> user_id_opt = getUserIdFromToken(authHeader);
+        if (!user_id_opt.has_value()) {
+            res.status = 401;
+            res.set_content(R"({"error": "Not authorized"})", "application/json");
+            return;
+        }
+
+        CassUuid user_id = user_id_opt.value();
+
+        json result = getUserDetails(database, user_id);
+
+        if (result.contains("error")) {
+            json error = {{ "error", result["error"] }};
+            res.status = result["code"];
+            res.set_content(error.dump(), "application/json");
+        }
+        else {
+            res.status = 200;
+            res.set_content(result[0].dump(), "application/json");
+        }
+
         setCommonHeaders(res);
     });
 
     svr.Post("/users", [&database](const httplib::Request& req, httplib::Response& res) {
-        createUser(req, res, database);
+        if (!checkFields(req, res, {"username", "password"})) {
+            return;
+        }
+
+        const json body = json::parse(req.body);
+        const std::string username = body["username"];
+        const std::string password = body["password"];
+
+        json result = createUser(database, username, password);
+
+        if (result.contains("error")) {
+            json error = {{ "error", result["error"] }};
+            res.status = result["code"];
+            res.set_content(error.dump(), "application/json");
+        }
+        else {
+            res.status = 204;
+        }
+
         setCommonHeaders(res);
     });
 
     svr.Post("/login", [&database](const httplib::Request& req, httplib::Response& res) {
-        verifyUser(req, res, database);
+        if (!checkFields(req, res, {"username", "password"})) {
+            return;
+        }
+
+        const json body = json::parse(req.body);
+        const std::string username = body["username"];
+        const std::string provided_password = body["password"];
+
+        json result = verifyUser(database, username, provided_password);
+
+        if (result.contains("error")) {
+            json error = {{ "error", result["error"] }};
+            res.status = result["code"];
+            res.set_content(error.dump(), "application/json");
+        }
+        else {
+            const std::string token = result["token"];
+
+            res.status = 200;
+            res.set_header("Content-Type", "application/json");
+            res.body = "{\"token\":\"" + token + "\"}";
+        }
+
         setCommonHeaders(res);
     });
 
-    svr.Delete("/users/:user_id", [&database](const httplib::Request& req, httplib::Response& res) {
-        deleteUser(req, res, database);
+    svr.Delete("/users", [&database](const httplib::Request& req, httplib::Response& res) {
+        std::string authHeader = req.get_header_value("Authorization");
+
+        std::optional<CassUuid> user_id_opt = getUserIdFromToken(authHeader);
+        if (!user_id_opt.has_value()) {
+            res.status = 401;
+            res.set_content(R"({"error": "Not authorized"})", "application/json");
+            return;
+        }
+
+        CassUuid user_id = user_id_opt.value();
+
+        json result = deleteUser(database, user_id);
+
+        if (result.contains("error")) {
+            json error = {{ "error", result["error"] }};
+            res.status = result["code"];
+            res.set_content(error.dump(), "application/json");
+        }
+        else {
+            res.status = 204;
+        }
+
         setCommonHeaders(res);
     });
 

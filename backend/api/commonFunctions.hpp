@@ -81,7 +81,43 @@ std::optional<CassUuid> getUserIdFromToken(const std::string& authHeader) {
     return std::nullopt;
 }
 
-bool userInRoom(ChatRoomDB& database, const CassUuid& user_uuid, const CassUuid& room_uuid) {
+bool isOwner(ChatRoomDB& database, const CassUuid& room_uuid, const CassUuid& user_uuid) {
+    const char* query = "SELECT COUNT(*) FROM chat.rooms WHERE room_id = ? AND owner_id = ?;";
+    CassStatement* statement = cass_statement_new(query, 2);
+    cass_statement_bind_uuid(statement, 0, room_uuid);
+    cass_statement_bind_uuid(statement, 1, user_uuid);
+    
+    json result = database.SelectQuery(statement);
+
+    if (result.empty() || !result[0].contains("count") || result[0]["count"] == 0) {
+        return false;
+    }
+    else if (result[0]["count"] == 1) {
+        return true;
+    }
+
+    return false;
+}
+
+bool isAdmin(ChatRoomDB& database, const CassUuid& room_uuid, const CassUuid& user_uuid) {
+    const char* query = "SELECT COUNT(*) FROM chat.rooms WHERE room_id = ? AND admin_ids CONTAINS ?;";
+    CassStatement* statement = cass_statement_new(query, 2);
+    cass_statement_bind_uuid(statement, 0, room_uuid);
+    cass_statement_bind_uuid(statement, 1, user_uuid);
+    
+    json result = database.SelectQuery(statement);
+
+    if (result.empty() || !result[0].contains("count") || result[0]["count"] == 0) {
+        return false;
+    }
+    else if (result[0]["count"] == 1) {
+        return true;
+    }
+
+    return false;
+}
+
+bool userInRoom(ChatRoomDB& database, const CassUuid& room_uuid, const CassUuid& user_uuid) {
     const char* query = "SELECT COUNT(*) FROM chat.rooms WHERE room_id = ? AND user_ids CONTAINS ?;";
     CassStatement* statement = cass_statement_new(query, 2);
     cass_statement_bind_uuid(statement, 0, room_uuid);

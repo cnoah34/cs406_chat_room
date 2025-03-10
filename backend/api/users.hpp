@@ -64,11 +64,11 @@ int userExists(ChatRoomDB& database, const std::string& username) {
     return 1;
 }
 
-json getUserDetails(ChatRoomDB& database, const CassUuid& user_id) {
+json getUserDetails(ChatRoomDB& database, const CassUuid& user_uuid) {
     const char* query = "SELECT username, room_ids, created_at FROM chat.users WHERE user_id = ?;"; 
 
     CassStatement* statement = cass_statement_new(query, 1);
-    cass_statement_bind_uuid(statement, 0, user_id);
+    cass_statement_bind_uuid(statement, 0, user_uuid);
 
     const json result = database.SelectQuery(statement);
 
@@ -142,10 +142,10 @@ json verifyUser(ChatRoomDB& database, const std::string& username, const std::st
     return {{ "token", token }};
 }
 
-json deleteUser(ChatRoomDB& database, const CassUuid user_id) { 
+json deleteUser(ChatRoomDB& database, const CassUuid user_uuid) { 
     const char* query = "DELETE FROM chat.users WHERE user_id = ?;";
     CassStatement* statement = cass_statement_new(query, 1);
-    cass_statement_bind_uuid(statement, 0, user_id);
+    cass_statement_bind_uuid(statement, 0, user_uuid);
 
     if (!database.ModifyQuery(statement)) {
         return { 
@@ -206,18 +206,18 @@ json createUser(ChatRoomDB& database, const std::string& username, const std::st
 
 void defineUserMethods(httplib::Server& svr, ChatRoomDB& database) {
     svr.Get("/users/metadata", [&database](const httplib::Request& req, httplib::Response& res) {
-        std::string authHeader = req.get_header_value("Authorization");
+        std::string auth_header = req.get_header_value("Authorization");
 
-        std::optional<CassUuid> user_id_opt = getUserIdFromToken(authHeader);
-        if (!user_id_opt.has_value()) {
+        std::optional<CassUuid> user_uuid_opt = getUserIdFromToken(auth_header);
+        if (!user_uuid_opt.has_value()) {
             res.status = 401;
             res.set_content(R"({"error": "Not authorized"})", "application/json");
             return;
         }
 
-        CassUuid user_id = user_id_opt.value();
+        CassUuid user_uuid = user_uuid_opt.value();
 
-        json result = getUserDetails(database, user_id);
+        json result = getUserDetails(database, user_uuid);
 
         if (result.contains("error")) {
             json error = {{ "error", result["error"] }};
@@ -289,18 +289,18 @@ void defineUserMethods(httplib::Server& svr, ChatRoomDB& database) {
     });
 
     svr.Delete("/users", [&database](const httplib::Request& req, httplib::Response& res) {
-        std::string authHeader = req.get_header_value("Authorization");
+        std::string auth_header = req.get_header_value("Authorization");
 
-        std::optional<CassUuid> user_id_opt = getUserIdFromToken(authHeader);
-        if (!user_id_opt.has_value()) {
+        std::optional<CassUuid> user_uuid_opt = getUserIdFromToken(auth_header);
+        if (!user_uuid_opt.has_value()) {
             res.status = 401;
             res.set_content(R"({"error": "Not authorized"})", "application/json");
             return;
         }
 
-        CassUuid user_id = user_id_opt.value();
+        CassUuid user_uuid = user_uuid_opt.value();
 
-        json result = deleteUser(database, user_id);
+        json result = deleteUser(database, user_uuid);
 
         if (result.contains("error")) {
             json error = {{ "error", result["error"] }};

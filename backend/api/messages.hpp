@@ -5,8 +5,8 @@
 #include <webSocketManager.hpp>
 
 
-json getMessages(ChatRoomDB& database, const CassUuid& user_id, const CassUuid& room_id, const std::string before, const std::string after, const int limit) {
-    if (!userInRoom(database, user_id, room_id)) {
+json getMessages(ChatRoomDB& database, const CassUuid& user_uuid, const CassUuid& room_uuid, const std::string before, const std::string after, const int limit) {
+    if (!userInRoom(database, user_uuid, room_uuid)) {
         return { 
             { "error", "Not authorized" }, 
             { "code", 401 } 
@@ -32,7 +32,7 @@ json getMessages(ChatRoomDB& database, const CassUuid& user_id, const CassUuid& 
         "ORDER BY created_at DESC LIMIT ?;";
 
     CassStatement* statement = cass_statement_new(query, 4);
-    cass_statement_bind_uuid(statement, 0, room_id);
+    cass_statement_bind_uuid(statement, 0, room_uuid);
     cass_statement_bind_int64(statement, 1, before_timestamp);
     cass_statement_bind_int64(statement, 2, after_timestamp);
     cass_statement_bind_int32(statement, 3, limit);
@@ -88,8 +88,8 @@ void deleteMessage(const httplib::Request& req, httplib::Response& res, ChatRoom
 }
 */
 
-json createMessage(ChatRoomDB& database, json& message, const CassUuid& user_id, const CassUuid& room_id, const std::string& content) {
-    if (!userInRoom(database, user_id, room_id)) {
+json createMessage(ChatRoomDB& database, json& message, const CassUuid& user_uuid, const CassUuid& room_uuid, const std::string& content) {
+    if (!userInRoom(database, user_uuid, room_uuid)) {
         return { 
             { "error", "Not authorized" }, 
             { "code", 401 } 
@@ -98,7 +98,7 @@ json createMessage(ChatRoomDB& database, json& message, const CassUuid& user_id,
 
     const char* select_username = "SELECT username FROM chat.users WHERE user_id = ?;";
     CassStatement* username_statement = cass_statement_new(select_username, 1);
-    cass_statement_bind_uuid(username_statement, 0, user_id);
+    cass_statement_bind_uuid(username_statement, 0, user_uuid);
 
     const json username_result = database.SelectQuery(username_statement);
 
@@ -114,8 +114,8 @@ json createMessage(ChatRoomDB& database, json& message, const CassUuid& user_id,
     const char* add_message = "INSERT INTO chat.messages (room_id, user_id, username, content, created_at) VALUES (?, ?, ?, ?, now());";
     
     CassStatement* insert_statement = cass_statement_new(add_message, 4);
-    cass_statement_bind_uuid(insert_statement, 0, room_id);
-    cass_statement_bind_uuid(insert_statement, 1, user_id);
+    cass_statement_bind_uuid(insert_statement, 0, room_uuid);
+    cass_statement_bind_uuid(insert_statement, 1, user_uuid);
     cass_statement_bind_string(insert_statement, 2, username.c_str());
     cass_statement_bind_string(insert_statement, 3, content.c_str());
 
@@ -140,16 +140,16 @@ json createMessage(ChatRoomDB& database, json& message, const CassUuid& user_id,
 
 void defineMessageMethods(httplib::Server& svr, ChatRoomDB& database) {
     svr.Get("/messages/:room_id", [&database](const httplib::Request& req, httplib::Response& res) {
-        std::string authHeader = req.get_header_value("Authorization");
+        std::string auth_header = req.get_header_value("Authorization");
 
-        std::optional<CassUuid> user_id_opt = getUserIdFromToken(authHeader);
-        if (!user_id_opt.has_value()) {
+        std::optional<CassUuid> user_uuid_opt = getUserIdFromToken(auth_header);
+        if (!user_uuid_opt.has_value()) {
             res.status = 401;
             res.set_content(R"({"error": "Not authorized"})", "application/json");
             return;
         }
 
-        CassUuid user_id = user_id_opt.value();
+        CassUuid user_uuid = user_uuid_opt.value();
 
         const std::string room_id = req.path_params.at("room_id");
         CassUuid room_uuid;
@@ -173,7 +173,7 @@ void defineMessageMethods(httplib::Server& svr, ChatRoomDB& database) {
             ? std::stoi(req.get_param_value("limit")) 
             : 20;
 
-        json result = getMessages(database, user_id, room_uuid, before, after, limit);
+        json result = getMessages(database, user_uuid, room_uuid, before, after, limit);
 
         if (result.contains("error")) {
             json error = {{ "error", result["error"] }};
@@ -200,16 +200,16 @@ void defineMessageMethods(httplib::Server& svr, ChatRoomDB& database) {
 
 void definePostMessage(httplib::Server& svr, ChatRoomDB& database, WebSocketManager& ws_manager) {
     svr.Post("/messages", [&database, &ws_manager](const httplib::Request& req, httplib::Response& res) {
-        const std::string authHeader = req.get_header_value("Authorization");
+        const std::string auth_header = req.get_header_value("Authorization");
 
-        std::optional<CassUuid> user_id_opt = getUserIdFromToken(authHeader);
-        if (!user_id_opt.has_value()) {
+        std::optional<CassUuid> user_uuid_opt = getUserIdFromToken(auth_header);
+        if (!user_uuid_opt.has_value()) {
             res.status = 401;
             res.set_content(R"({"error": "Not authorized"})", "application/json");
             return;
         }
 
-        CassUuid user_id = user_id_opt.value();
+        CassUuid user_uuid = user_uuid_opt.value();
 
         const json body = json::parse(req.body);
 
@@ -232,7 +232,7 @@ void definePostMessage(httplib::Server& svr, ChatRoomDB& database, WebSocketMana
 
         json message;
 
-        json result = createMessage(database, message, user_id, room_uuid, content);
+        json result = createMessage(database, message, user_uuid, room_uuid, content);
 
         if (result.contains("error")) {
             json error = {{ "error", result["error"] }};
@@ -243,7 +243,7 @@ void definePostMessage(httplib::Server& svr, ChatRoomDB& database, WebSocketMana
             // Broadcast message via websocket to connected users
             if (message.contains("created_at") && message.contains("username")) {
                 char user_id_str[CASS_UUID_STRING_LENGTH];
-                cass_uuid_string(user_id, user_id_str);
+                cass_uuid_string(user_uuid, user_id_str);
                 message["user_id"] = user_id_str;
                 message["content"] = content;
 

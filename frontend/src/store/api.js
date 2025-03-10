@@ -11,10 +11,15 @@ export const useWebSocketStore = defineStore('websocket', {
     state: () => ({
         socket: null,
         is_connected: false,
-        new_message: false
+        new_message: false,
+        new_message_data: [],
     }),
     actions: {
         connectWebSocket(roomId) {
+            if (this.socket && this.is_connected) {
+                this.closeConnection()
+            }
+
             this.socket = new WebSocket(`ws://localhost:8000/ws`)
             
             this.socket.onopen = () => {
@@ -26,11 +31,10 @@ export const useWebSocketStore = defineStore('websocket', {
             }
 
             this.socket.onmessage = (event) => {
-                const message = event.data
+                const message = JSON.parse(event.data)
 
-                if (message === "NEW_MESSAGE") {
-                    this.new_message = true
-                }
+                this.new_message_data = message
+                this.new_message = true
             }
 
             this.socket.onerror = (error) => {

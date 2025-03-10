@@ -5,7 +5,7 @@
 #include <webSocketManager.hpp>
 
 
-json getMessages(ChatRoomDB& database, const CassUuid& user_id, const CassUuid& room_id, const std::string before, const int limit) {
+json getMessages(ChatRoomDB& database, const CassUuid& user_id, const CassUuid& room_id, const std::string before, const std::string after, const int limit) {
     if (!userInRoom(database, user_id, room_id)) {
         return { 
             { "error", "Not authorized" }, 
@@ -15,21 +15,27 @@ json getMessages(ChatRoomDB& database, const CassUuid& user_id, const CassUuid& 
 
     // Most recent messages by default, if user provided then convert to cassandra timestamp
     cass_int64_t before_timestamp = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()) * 1000;
-    if (!before.empty() && cassTimestampFromString(before.c_str(), &before_timestamp) != CASS_OK) {
+    cass_int64_t after_timestamp = 0;
+
+    if ((!before.empty() && cassTimestampFromString(before.c_str(), &before_timestamp) != CASS_OK) ||
+        (!after.empty() && cassTimestampFromString(after.c_str(), &after_timestamp) != CASS_OK)) {
         return { 
-            { "error", "Invalid timestamp in 'before'" }, 
+            { "error", "Invalid timestamp in parameters" }, 
             { "code", 400 } 
         };
     }
 
+    after_timestamp += 1000; // Add a second to avoid returning same message
+
     const char* query = "SELECT user_id, username, content, toTimestamp(created_at) AS created_at FROM chat.messages "
-        "WHERE room_id = ? AND created_at < minTimeuuid(?) "
+        "WHERE room_id = ? AND created_at < minTimeuuid(?) AND created_at > maxTimeuuid(?)"
         "ORDER BY created_at DESC LIMIT ?;";
 
-    CassStatement* statement = cass_statement_new(query, 3);
+    CassStatement* statement = cass_statement_new(query, 4);
     cass_statement_bind_uuid(statement, 0, room_id);
     cass_statement_bind_int64(statement, 1, before_timestamp);
-    cass_statement_bind_int32(statement, 2, limit);
+    cass_statement_bind_int64(statement, 2, after_timestamp);
+    cass_statement_bind_int32(statement, 3, limit);
 
     const json result = database.SelectQuery(statement);
 
@@ -82,7 +88,7 @@ void deleteMessage(const httplib::Request& req, httplib::Response& res, ChatRoom
 }
 */
 
-json createMessage(ChatRoomDB& database, const CassUuid& user_id, const CassUuid& room_id, const std::string& content) {
+json createMessage(ChatRoomDB& database, json& message, const CassUuid& user_id, const CassUuid& room_id, const std::string& content) {
     if (!userInRoom(database, user_id, room_id)) {
         return { 
             { "error", "Not authorized" }, 
@@ -120,6 +126,15 @@ json createMessage(ChatRoomDB& database, const CassUuid& user_id, const CassUuid
         };
     }
 
+    const char* time_query = "SELECT dateof(now()) AS time FROM system.local;";
+    CassStatement* time_statement = cass_statement_new(time_query, 0);
+    json result = database.SelectQuery(time_statement);
+
+    if (result[0].contains("time")) {
+        message["created_at"] = result[0]["time"];
+        message["username"] = username;
+    }
+
     return {};
 }
 
@@ -150,11 +165,15 @@ void defineMessageMethods(httplib::Server& svr, ChatRoomDB& database) {
             ? req.get_param_value("before")
             : "";
 
+        std::string after = req.has_param("after") && req.get_param_value("after") != ""
+            ? req.get_param_value("after")
+            : "";
+
         int limit = req.has_param("limit") && req.get_param_value("limit") != "" 
             ? std::stoi(req.get_param_value("limit")) 
             : 20;
 
-        json result = getMessages(database, user_id, room_uuid, before, limit);
+        json result = getMessages(database, user_id, room_uuid, before, after, limit);
 
         if (result.contains("error")) {
             json error = {{ "error", result["error"] }};
@@ -211,7 +230,9 @@ void definePostMessage(httplib::Server& svr, ChatRoomDB& database, WebSocketMana
             return;
         }
 
-        json result = createMessage(database, user_id, room_uuid, content);
+        json message;
+
+        json result = createMessage(database, message, user_id, room_uuid, content);
 
         if (result.contains("error")) {
             json error = {{ "error", result["error"] }};
@@ -219,8 +240,17 @@ void definePostMessage(httplib::Server& svr, ChatRoomDB& database, WebSocketMana
             res.set_content(error.dump(), "application/json");
         }
         else {
+            // Broadcast message via websocket to connected users
+            if (message.contains("created_at") && message.contains("username")) {
+                char user_id_str[CASS_UUID_STRING_LENGTH];
+                cass_uuid_string(user_id, user_id_str);
+                message["user_id"] = user_id_str;
+                message["content"] = content;
+
+                ws_manager.broadcastToRoom(room_id, message.dump());
+            }
+
             res.status = 204;
-            ws_manager.broadcastToRoom(room_id, "NEW_MESSAGE");
         }
 
         setCommonHeaders(res);

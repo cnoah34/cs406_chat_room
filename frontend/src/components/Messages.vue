@@ -37,7 +37,7 @@
 
     const socket = ref(null)
 
-    const getMessages = async (before = null) => {
+    const getOldMessages = async (before = null) => {
         try {
             if (!userStore.current_room.room_id) {
                 return
@@ -48,8 +48,7 @@
             const limit = 20
 
             const url = before
-            ?
-            `${apiStore.rest_url}/messages/${userStore.current_room.room_id}?limit=${limit}&before=${before}`
+            ? `${apiStore.rest_url}/messages/${userStore.current_room.room_id}?limit=${limit}&before=${before}`
             : `${apiStore.rest_url}/messages/${userStore.current_room.room_id}?limit=${limit}`
 
             const response = await axios.get(url, {
@@ -74,7 +73,7 @@
             loading.value = false
         }
     }
-    
+
     const handleScroll = (event) => {
         const container = event.target
 
@@ -87,7 +86,7 @@
             const oldest_message = messages.value[0]
 
             if (oldest_message) {
-                getMessages(oldest_message.created_at)
+                getOldMessages(oldest_message.created_at)
             }
         }
     }
@@ -98,19 +97,21 @@
             if (new_room && new_room !== old_room) {
                 messages.value = []
                 has_more_messages.value = true
-                getMessages()
+                getOldMessages()
             }
         },
         { immediate: true }
     )
 
-    // TODO: Doesn't quite work
+    // Watch for new messages received, add them to messages
     watch(
         () => webSocketStore.new_message,
         (new_state, old_state) => {
             if (new_state && new_state !== old_state) {
-                //getMessages()
-                //webSocketStore.new_message = false
+                messages.value.push(webSocketStore.new_message_data)
+
+                webSocketStore.new_message_data = []
+                webSocketStore.new_message = false
             }
         },
         { immediate: true }

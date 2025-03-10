@@ -68,6 +68,17 @@ int main() {
                 json body = json::parse(message);
 
                 if (body.contains("room_id")) {
+                    UserData* user_data = ws->getUserData();
+                    if (!user_data) {
+                        return;
+                    }
+
+                    if (!user_data->room_id.empty()) {
+                        ws_manager.removeUserFromRoom(user_data->room_id, ws);
+                    }
+
+                    user_data->room_id = body["room_id"];
+
                     ws_manager.addUserToRoom(body["room_id"], ws);
                 }
                 else if (body.contains("message") && body["message"].contains("room_id")) {
@@ -76,7 +87,12 @@ int main() {
             },
             .close = [&](uWS::WebSocket<false, true, UserData>* ws, int code, std::string_view message) {
                 std::cout << "Websocket closed" << std::endl;
-                ws_manager.removeUserFromRoom("default", ws);
+                UserData* user_data = ws->getUserData();
+                if (!user_data) {
+                    return;
+                }
+                
+                ws_manager.removeUserFromRoom(user_data->room_id, ws);
             }
         }).listen(websocket_port, [&](auto* token) {
             if (token) {

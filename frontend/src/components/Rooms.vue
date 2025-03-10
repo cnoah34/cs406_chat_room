@@ -49,7 +49,6 @@
 
     const selectRoom = (room) => {
         userStore.current_room = room
-        console.log(userStore.current_room.room_id)
         
         webSocketStore.connectWebSocket(userStore.current_room.room_id)
     }
@@ -57,7 +56,7 @@
     onMounted(() => {
         rooms.value = []
         
-        // Query rooms here
+        // TODO: Query rooms here
 
         userStore.room_ids.forEach(room_id => {
             getRoom(room_id)

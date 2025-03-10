@@ -12,7 +12,7 @@
 
 
 struct UserData {
-    std::string user_id;
+    std::string room_id;
 };
 
 

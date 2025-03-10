@@ -11,7 +11,7 @@
 #include <users.hpp>
 #include <messages.hpp>
 #include <rooms.hpp>
-#include <websocketManager.hpp>
+#include <webSocketManager.hpp>
 
 using json = nlohmann::json;
 
@@ -40,7 +40,7 @@ int main() {
     ChatRoomDB database(database_ip);
     WebSocketManager ws_manager;
 
-    std::thread rest_server_thread([&database, &rest_port, &ws_manager]() {
+    std::thread rest_server_thread([&database, &ws_manager, &rest_port]() {
         httplib::Server svr;
 
         svr.Options(R"(/.*)", [](const httplib::Request&, httplib::Response& res) {
@@ -51,7 +51,7 @@ int main() {
         defineUserMethods(svr, database);
         defineMessageMethods(svr, database);
         defineRoomMethods(svr, database);
-        definePostMessage(svr, database);
+        definePostMessage(svr, database, ws_manager);
 
         std::cout << "REST server listening on port: " << rest_port << std::endl;
         svr.listen("0.0.0.0", rest_port);
@@ -61,11 +61,18 @@ int main() {
         uWS::App().ws<UserData>("/ws", {
             .open = [&](uWS::WebSocket<false, true, UserData>* ws) {
                 std::cout << "New websocket connection" << std::endl;
-                ws_manager.addUserToRoom("default", ws);
             },
             .message = [&](uWS::WebSocket<false, true, UserData>* ws, std::string_view message, uWS::OpCode op_code) {
                 std::cout << "Received message: "<< message << std::endl;
-                ws_manager.broadcastToRoom("default", std::string(message));
+
+                json body = json::parse(message);
+
+                if (body.contains("room_id")) {
+                    ws_manager.addUserToRoom(body["room_id"], ws);
+                }
+                else if (body.contains("message") && body["message"].contains("room_id")) {
+                    ws_manager.broadcastToRoom(body["message"]["room_id"], body["message"]);
+                }
             },
             .close = [&](uWS::WebSocket<false, true, UserData>* ws, int code, std::string_view message) {
                 std::cout << "Websocket closed" << std::endl;

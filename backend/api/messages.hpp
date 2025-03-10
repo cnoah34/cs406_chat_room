@@ -2,6 +2,7 @@
 #define CHATMESSAGE_HPP_INCLUDED
 
 #include <commonFunctions.hpp>
+#include <webSocketManager.hpp>
 
 
 json getMessages(ChatRoomDB& database, const CassUuid& user_id, const CassUuid& room_id, const std::string before, const int limit) {
@@ -178,8 +179,8 @@ void defineMessageMethods(httplib::Server& svr, ChatRoomDB& database) {
     return;
 }
 
-void definePostMessage(httplib::Server& svr, ChatRoomDB& database) {
-    svr.Post("/messages", [&database](const httplib::Request& req, httplib::Response& res) {
+void definePostMessage(httplib::Server& svr, ChatRoomDB& database, WebSocketManager& ws_manager) {
+    svr.Post("/messages", [&database, &ws_manager](const httplib::Request& req, httplib::Response& res) {
         const std::string authHeader = req.get_header_value("Authorization");
 
         std::optional<CassUuid> user_id_opt = getUserIdFromToken(authHeader);
@@ -219,6 +220,7 @@ void definePostMessage(httplib::Server& svr, ChatRoomDB& database) {
         }
         else {
             res.status = 204;
+            ws_manager.broadcastToRoom(room_id, "NEW_MESSAGE");
         }
 
         setCommonHeaders(res);

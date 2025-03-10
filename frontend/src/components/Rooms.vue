@@ -13,11 +13,12 @@
 <script setup>
     import { ref, onMounted } from 'vue'
     import { useUserStore } from '@/store/user'
-    import { useApiStore } from '@/store/api'
+    import { useApiStore, useWebSocketStore } from '@/store/api'
     import axios from 'axios'
 
     const userStore = useUserStore()
     const apiStore = useApiStore()
+    const webSocketStore = useWebSocketStore()
 
     const rooms = ref([])
 
@@ -48,6 +49,9 @@
 
     const selectRoom = (room) => {
         userStore.current_room = room
+        console.log(userStore.current_room.room_id)
+        
+        webSocketStore.connectWebSocket(userStore.current_room.room_id)
     }
 
     onMounted(() => {

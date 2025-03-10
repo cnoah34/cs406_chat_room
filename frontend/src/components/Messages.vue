@@ -21,18 +21,21 @@
 
 <script setup>
     import { ref, onMounted, watch } from 'vue'
-    import { useApiStore } from '@/store/api'
+    import { useApiStore, useWebSocketStore } from '@/store/api'
     import { useUserStore } from '@/store/user'
     import TypingBar from './TypingBar.vue'
     import axios from 'axios'
 
     const userStore = useUserStore()
     const apiStore = useApiStore()
+    const webSocketStore = useWebSocketStore()
 
     const messages = ref([])
 
     const loading = ref(false)
     const has_more_messages = ref(true)
+
+    const socket = ref(null)
 
     const getMessages = async (before = null) => {
         try {
@@ -71,19 +74,7 @@
             loading.value = false
         }
     }
-
-    watch(
-        () => userStore.current_room,
-        (new_room, old_room) => {
-            if (new_room && new_room !== old_room) {
-                messages.value = []
-                has_more_messages.value = true
-                getMessages()
-            }
-        },
-        { immediate: true }
-    )
-
+    
     const handleScroll = (event) => {
         const container = event.target
 
@@ -101,6 +92,30 @@
         }
     }
 
+    watch(
+        () => userStore.current_room,
+        (new_room, old_room) => {
+            if (new_room && new_room !== old_room) {
+                messages.value = []
+                has_more_messages.value = true
+                getMessages()
+            }
+        },
+        { immediate: true }
+    )
+
+    // TODO: Doesn't quite work
+    watch(
+        () => webSocketStore.new_message,
+        (new_state, old_state) => {
+            if (new_state && new_state !== old_state) {
+                //getMessages()
+                //webSocketStore.new_message = false
+            }
+        },
+        { immediate: true }
+    )
+    
     onMounted(() => {
         messages.value = []
     })

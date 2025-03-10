@@ -5,7 +5,7 @@ CFLAGS=-Wall -Wextra
 # VCPKG for jwt-cpp
 VCPKG_DIR=/home/colby/vcpkg/installed/x64-linux/
 VCPKG_INCLUDE=$(VCPKG_DIR)/include
-VCPKG_LIB=$(VCPKG)/lib
+VCPKG_LIB=$(VCPKG_DIR)/lib
 
 # Include directories (isystem is the same as I, just without compiler warnings)
 INCLUDE=-I./include \
@@ -17,7 +17,7 @@ INCLUDE=-I./include \
 SCYLLA_LIB=./include/cpp-driver/build/libscylla-cpp-driver.so -Wl,-rpath,./include/cpp-driver/build/
 
 # Linking these
-LIBS=-lbcrypt -lcrypto -lssl 
+LIBS=-lbcrypt -lcrypto -lssl -lz -luSockets
 
 # For VCPKG installed libraries
 LDFLAGS=-L$(VCPKG_LIB)

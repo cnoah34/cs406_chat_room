@@ -175,6 +175,10 @@ void defineMessageMethods(httplib::Server& svr, ChatRoomDB& database) {
     });
     */
     
+    return;
+}
+
+void definePostMessage(httplib::Server& svr, ChatRoomDB& database) {
     svr.Post("/messages", [&database](const httplib::Request& req, httplib::Response& res) {
         const std::string authHeader = req.get_header_value("Authorization");
 
@@ -222,7 +226,6 @@ void defineMessageMethods(httplib::Server& svr, ChatRoomDB& database) {
 
     return;
 }
-
 
 #endif
 

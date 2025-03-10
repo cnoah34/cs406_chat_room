@@ -6,7 +6,7 @@
 
 
 json getMessages(ChatRoomDB& database, const CassUuid& user_uuid, const CassUuid& room_uuid, const std::string before, const std::string after, const int limit) {
-    if (!userInRoom(database, user_uuid, room_uuid)) {
+    if (!isInRoom(database, room_uuid, user_uuid)) {
         return { 
             { "error", "Not authorized" }, 
             { "code", 401 } 
@@ -89,7 +89,7 @@ void deleteMessage(const httplib::Request& req, httplib::Response& res, ChatRoom
 */
 
 json createMessage(ChatRoomDB& database, json& message, const CassUuid& user_uuid, const CassUuid& room_uuid, const std::string& content) {
-    if (!userInRoom(database, user_uuid, room_uuid)) {
+    if (!isInRoom(database, user_uuid, room_uuid)) {
         return { 
             { "error", "Not authorized" }, 
             { "code", 401 } 

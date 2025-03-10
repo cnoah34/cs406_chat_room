@@ -117,7 +117,7 @@ bool isAdmin(ChatRoomDB& database, const CassUuid& room_uuid, const CassUuid& us
     return false;
 }
 
-bool userInRoom(ChatRoomDB& database, const CassUuid& room_uuid, const CassUuid& user_uuid) {
+bool isInRoom(ChatRoomDB& database, const CassUuid& room_uuid, const CassUuid& user_uuid) {
     const char* query = "SELECT COUNT(*) FROM chat.rooms WHERE room_id = ? AND user_ids CONTAINS ?;";
     CassStatement* statement = cass_statement_new(query, 2);
     cass_statement_bind_uuid(statement, 0, room_uuid);

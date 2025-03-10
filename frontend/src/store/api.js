@@ -52,9 +52,11 @@ export const useWebSocketStore = defineStore('websocket', {
             }
         },
         closeConnection() {
-            if (this.socket) {
+            if (this.socket && this.is_connected) {
                 this.socket.close()
                 this.is_connected = false
+
+                localStorage.removeItem('websocket')
             }
         },
     },

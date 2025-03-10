@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import axios from 'axios'
-import { useApiStore} from '@/store/api'
+import { useApiStore, useWebSocketStore } from '@/store/api'
 import { useUserStore } from '@/store/user'
 
 
@@ -30,6 +30,9 @@ export async function login(token, router) {
     const userStore = useUserStore()
     userStore.clearUser()
 
+    const webSocketStore = useWebSocketStore()
+    webSocketStore.closeConnection()
+
     isAuthenticated.value = true
     await fetchUserData()
 
@@ -43,6 +46,9 @@ export function logout(router) {
     const userStore = useUserStore()
     userStore.clearUser()
     
+    const webSocketStore = useWebSocketStore()
+    webSocketStore.closeConnection()
+
     isAuthenticated.value = false
 
     router.push('/')

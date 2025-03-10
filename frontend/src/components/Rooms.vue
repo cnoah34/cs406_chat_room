@@ -2,7 +2,8 @@
     <div class="rooms">
         <h1 style="color: white;">Your rooms</h1>
         <ul>
-            <li v-for="room in rooms" :key="room.room_id" @click="selectRoom(room)">
+            <li v-for="room in rooms" :key="room.room_id" @click="selectRoom(room)"
+                :class="{ selected: userStore.current_room && room.room_id === userStore.current_room.room_id }">
                 {{ room.name }}
             </li>
         </ul>
@@ -88,7 +89,7 @@ ul {
 }
 
 li {
-    color: var(--vue-green);
+    color: white;
     cursor: pointer;
     text-decoration: underline;
     font-size: 14pt;
@@ -98,4 +99,8 @@ li:hover {
     text-decoration: none;
 }
 
+.selected {
+    color: var(--vue-green);
+    font-size: 16pt;
+}
 </style>

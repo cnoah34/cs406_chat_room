@@ -50,8 +50,6 @@
 
     const selectRoom = (room) => {
         userStore.current_room = room
-        
-        webSocketStore.connectWebSocket(userStore.current_room.room_id)
     }
 
     onMounted(() => {

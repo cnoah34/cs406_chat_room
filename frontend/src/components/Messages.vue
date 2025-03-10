@@ -98,6 +98,8 @@
                 messages.value = []
                 has_more_messages.value = true
                 getOldMessages()
+
+                webSocketStore.connectWebSocket(userStore.current_room.room_id)
             }
         },
         { immediate: true }
@@ -108,6 +110,7 @@
         () => webSocketStore.new_message,
         (new_state, old_state) => {
             if (new_state && new_state !== old_state) {
+                // TODO: Consider adding check for room_id here (not in message payload currently)
                 messages.value.push(webSocketStore.new_message_data)
 
                 webSocketStore.new_message_data = []

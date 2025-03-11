@@ -29,7 +29,13 @@
         is_error: false,
     })
 
+    const created_room = ref(false)
+
     const handleSubmit = async () => {
+        if (created_room.value) {
+            return;
+        }
+
         result.value = { message: '', is_error: false }
 
         try {
@@ -42,6 +48,7 @@
                 })
 
             if (response.status == 200 || response.status == 204) {
+                created_room.value = true
                 result.value = {
                     message: 'Room successfully created', 
                     is_error: false,
@@ -118,7 +125,7 @@ button {
     border: none;
     cursor: pointer;
     margin-top: 20px;
-    margin-bottom: 20px;
+    margin-bottom: 30px;
 }
 
 button:hover {

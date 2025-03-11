@@ -1,13 +1,15 @@
 <template>
     <div class="parent">
         <h1 style="color: var(--vue-green);">Create a Room</h1>
-        <form @submit.prevent="handleSubmit">
+        <form @submit.prevent="handleSubmit" autocomplete="off">
             <label for="room_name">Room name</label>
             <input type="text" id="room_name" v-model="room_name"
                                               placeholder="Enter the room name" />
 
             <button type="submit">Submit</button>
         </form>
+        <p v-if="result.message" :class="{'error': result.is_error, 
+                 'success': !result.is_error}">{{ result.message }}</p>
     </div>
 </template>
 
@@ -67,17 +69,70 @@
 
 <style scoped>
 .parent {
-    background-color: var(--vt-c-black);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     display: flex;
     flex-direction: column;
-    height: 100%;
+    align-self: center;
+    align-items: center;
+    padding: 20px;
+    height: 38vh;
+    width: 25vw;
+    background-color: var(--vt-c-black);
+    border: 3px solid var(--vue-green);
+    background-color: var(--foreground);
+}
+
+h1 {
+    font-size: 30pt;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+    width: 80%;
+}
+
+form label {
+    font-size: 20pt;
+    text-align: left;
+    margin-top: 20px;
+}
+
+form input {
+    font-size: 18pt;
+    min-height: 40px;
+}
+
+form input:focus {
+    outline: none;
+}
+
+button {
     width: 100%;
+    font-size: 18pt;
+    padding: 10px;
+    background-color: var(--vue-green);
+    border: none;
+    cursor: pointer;
+    margin-top: 20px;
+    margin-bottom: 20px;
 }
 
-p {
-    font-size: 50pt;
-    color: white;
+button:hover {
+    background-color: var(--vue-green);
 }
 
+.error {
+    color: red;
+    font: bold;
+}
+
+.success {
+    color: var(--vue-green);
+    font: bold;
+}
 
 </style>

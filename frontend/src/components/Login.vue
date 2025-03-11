@@ -184,6 +184,10 @@
     align-items: center;
 }
 
+.form-data input:focus {
+    outline: none;
+}
+
 button {
     width: 100%;
     font-size: 14pt;

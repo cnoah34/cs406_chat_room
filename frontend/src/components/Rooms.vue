@@ -81,6 +81,7 @@
     display: flex;
     flex-direction: column;
     height: 80vh;
+    max-width: 18vw;
     background-color: var(--foreground);
 }
 
@@ -108,6 +109,7 @@ li {
     cursor: pointer;
     text-decoration: underline;
     font-size: 14pt;
+    word-break: break-word;
 }
 
 li:hover {

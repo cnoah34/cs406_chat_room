@@ -33,7 +33,7 @@
         result.value = { message: '', is_error: false }
 
         try {
-            const response = await axios.patch(`${apiStore.rest_url}/rooms/add_user`, 
+            const response = await axios.patch(`${apiStore.rest_url}/rooms/add-user`, 
                 { room_id: room_id.value },
                 {
                     headers: { 

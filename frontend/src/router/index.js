@@ -8,8 +8,8 @@ import JoinRoomView from '../views/JoinRoomView.vue'
 const routes = [
     { path: '/', component: WelcomeView },
     { path: '/home', component: HomeView, meta: { requiresAuth: true } },
-    { path: '/create-room', component: CreateRoomView.vue, meta: { requiresAuth: true } },
-    { path: '/join-room', component: JoinRoomView.vue, meta: { requiresAuth: true } },
+    { path: '/create-room', component: CreateRoomView, meta: { requiresAuth: true } },
+    { path: '/join-room', component: JoinRoomView, meta: { requiresAuth: true } },
 ]
 
 const router = createRouter ({

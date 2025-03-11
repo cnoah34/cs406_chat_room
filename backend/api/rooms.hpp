@@ -235,6 +235,8 @@ json createRoom(ChatRoomDB &database, const CassUuid& user_uuid, const std::stri
 void defineRoomMethods(httplib::Server& svr, ChatRoomDB& database) {
     // Get details of a room
     svr.Get("/rooms/:room_id/", [&database](const httplib::Request& req, httplib::Response& res) {
+        setCommonHeaders(res);
+
         const std::string room_id = req.path_params.at("room_id");
         CassUuid room_uuid;
 
@@ -255,32 +257,32 @@ void defineRoomMethods(httplib::Server& svr, ChatRoomDB& database) {
             res.status = 200;
             res.set_content(result.dump(), "application/json");
         }
-
-        setCommonHeaders(res);
     });
 
     /*
     // Remove admin
     svr.Patch("/rooms/remove_admin", [&database](const httplib::Request& req, httplib::Response& res) {
-        removeAdmin(req, res, database);
         setCommonHeaders(res);
+        removeAdmin(req, res, database);
     });
 
     // Make user admin
     svr.Patch("/rooms/make_admin", [&database](const httplib::Request& req, httplib::Response& res) {
-        makeUserAdmin(req, res, database);
         setCommonHeaders(res);
+        makeUserAdmin(req, res, database);
     });
 
     // Remove user from room
     svr.Patch("/rooms/remove_user", [&database](const httplib::Request& req, httplib::Response& res) {
-        removeUserFromRoom(req, res, database);
         setCommonHeaders(res);
+        removeUserFromRoom(req, res, database);
     });
     */
 
     // Add user to room
     svr.Patch("/rooms/add_user", [&database](const httplib::Request& req, httplib::Response& res) {
+        setCommonHeaders(res);
+
         const json body = json::parse(req.body);
 
         if (!hasFields(body, { "room_id", "user_id" })) {
@@ -312,12 +314,12 @@ void defineRoomMethods(httplib::Server& svr, ChatRoomDB& database) {
         else {
             res.status = 204;
         }
-
-        setCommonHeaders(res);
     });
 
     // Delete room
     svr.Delete("/rooms/:room_id", [&database](const httplib::Request& req, httplib::Response& res) {
+        setCommonHeaders(res);
+        
         std::string auth_header = req.get_header_value("Authorization");
 
         std::optional<CassUuid> user_uuid_opt = getUserIdFromToken(auth_header);
@@ -361,12 +363,12 @@ void defineRoomMethods(httplib::Server& svr, ChatRoomDB& database) {
         else {
             res.status = 204;
         }
-
-        setCommonHeaders(res);
     });
 
     // Create room
     svr.Post("/rooms", [&database](const httplib::Request& req, httplib::Response& res) {
+        setCommonHeaders(res);
+
         std::string auth_header = req.get_header_value("Authorization");
 
         std::optional<CassUuid> user_uuid_opt = getUserIdFromToken(auth_header);
@@ -388,6 +390,12 @@ void defineRoomMethods(httplib::Server& svr, ChatRoomDB& database) {
 
         const std::string name = body["name"];
 
+        if (name == "") {
+            res.status = 400; 
+            res.set_content(R"({"error": "Invalid room name"})", "application/json");
+            return;
+        }
+
         json result = createRoom(database, user_uuid, name);
 
         if (result.contains("error")) {
@@ -398,8 +406,6 @@ void defineRoomMethods(httplib::Server& svr, ChatRoomDB& database) {
         else {
             res.status = 204;
         }
-
-        setCommonHeaders(res);
     });
 
     return;

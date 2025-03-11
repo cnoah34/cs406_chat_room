@@ -206,6 +206,8 @@ json createUser(ChatRoomDB& database, const std::string& username, const std::st
 
 void defineUserMethods(httplib::Server& svr, ChatRoomDB& database) {
     svr.Get("/users/metadata", [&database](const httplib::Request& req, httplib::Response& res) {
+        setCommonHeaders(res);
+
         std::string auth_header = req.get_header_value("Authorization");
 
         std::optional<CassUuid> user_uuid_opt = getUserIdFromToken(auth_header);
@@ -228,11 +230,11 @@ void defineUserMethods(httplib::Server& svr, ChatRoomDB& database) {
             res.status = 200;
             res.set_content(result[0].dump(), "application/json");
         }
-
-        setCommonHeaders(res);
     });
 
     svr.Post("/users", [&database](const httplib::Request& req, httplib::Response& res) {
+        setCommonHeaders(res);
+
         const json body = json::parse(req.body);
 
         if (!hasFields(body, { "username", "password" })) {
@@ -254,11 +256,11 @@ void defineUserMethods(httplib::Server& svr, ChatRoomDB& database) {
         else {
             res.status = 204;
         }
-
-        setCommonHeaders(res);
     });
 
     svr.Post("/login", [&database](const httplib::Request& req, httplib::Response& res) {
+        setCommonHeaders(res);
+
         const json body = json::parse(req.body);
 
         if (!hasFields(body, { "username", "password" })) {
@@ -284,11 +286,11 @@ void defineUserMethods(httplib::Server& svr, ChatRoomDB& database) {
             res.set_header("Content-Type", "application/json");
             res.body = "{\"token\":\"" + token + "\"}";
         }
-
-        setCommonHeaders(res);
     });
 
     svr.Delete("/users", [&database](const httplib::Request& req, httplib::Response& res) {
+        setCommonHeaders(res);
+
         std::string auth_header = req.get_header_value("Authorization");
 
         std::optional<CassUuid> user_uuid_opt = getUserIdFromToken(auth_header);
@@ -310,8 +312,6 @@ void defineUserMethods(httplib::Server& svr, ChatRoomDB& database) {
         else {
             res.status = 204;
         }
-
-        setCommonHeaders(res);
     });
 
     return;

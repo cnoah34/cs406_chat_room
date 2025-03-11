@@ -140,6 +140,8 @@ json createMessage(ChatRoomDB& database, json& message, const CassUuid& user_uui
 
 void defineMessageMethods(httplib::Server& svr, ChatRoomDB& database) {
     svr.Get("/messages/:room_id", [&database](const httplib::Request& req, httplib::Response& res) {
+        setCommonHeaders(res);
+
         std::string auth_header = req.get_header_value("Authorization");
 
         std::optional<CassUuid> user_uuid_opt = getUserIdFromToken(auth_header);
@@ -184,14 +186,12 @@ void defineMessageMethods(httplib::Server& svr, ChatRoomDB& database) {
             res.status = 200;
             res.set_content(result.dump(), "application/json");
         }
-
-        setCommonHeaders(res);
     });
 
     /*
     svr.Delete("/messages/:room_id/:created_at", [&database](const httplib::Request& req, httplib::Response& res) {
-        deleteMessage(req, res, database);
         setCommonHeaders(res);
+        deleteMessage(req, res, database);
     });
     */
     
@@ -200,6 +200,8 @@ void defineMessageMethods(httplib::Server& svr, ChatRoomDB& database) {
 
 void definePostMessage(httplib::Server& svr, ChatRoomDB& database, WebSocketManager& ws_manager) {
     svr.Post("/messages", [&database, &ws_manager](const httplib::Request& req, httplib::Response& res) {
+        setCommonHeaders(res);
+
         const std::string auth_header = req.get_header_value("Authorization");
 
         std::optional<CassUuid> user_uuid_opt = getUserIdFromToken(auth_header);
@@ -252,8 +254,6 @@ void definePostMessage(httplib::Server& svr, ChatRoomDB& database, WebSocketMana
 
             res.status = 204;
         }
-
-        setCommonHeaders(res);
     });
 
     return;

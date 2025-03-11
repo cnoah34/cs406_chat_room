@@ -29,8 +29,8 @@
             </form>
 
 
-            <p v-if='result.message' :class="{'error': result.isError, 'success':
-                                             !result.isError}">{{ result.message }}</p>
+            <p v-if='result.message' :class="{'error': result.is_error, 'success':
+                                             !result.is_error}">{{ result.message }}</p>
         </div>
 
         <p style='margin-top: auto'>
@@ -54,7 +54,7 @@
 
     const result = ref({
         message: '',
-        isError: false
+        is_error: false
     })
 
     const formData = ref({
@@ -94,7 +94,7 @@
         formData.value.password = ''
         checkRequirements()
         showPasswordRequirements.value = false
-        result.value = { message: '', isError: false }
+        result.value = { message: '', is_error: false }
     }
     
     const validatePassword = (password) => {
@@ -103,10 +103,10 @@
     }
 
     const handleSubmit = async () => {
-        result.value = { message: '', isError: false }
+        result.value = { message: '', is_error: false }
 
         if (!isLogin.value && !validatePassword(formData.value.password)) {
-            result.value = { message: 'Password does not meet requirements', isError: true }
+            result.value = { message: 'Password does not meet requirements', is_error: true }
             return
         }
 
@@ -120,7 +120,7 @@
                     message: isLogin.value
                         ? 'Login successful'
                         : 'Sign up successful, please login',
-                    isError: false
+                    is_error: false
                 }
                     
                 if (isLogin.value) {
@@ -130,7 +130,7 @@
                         login(token, router)    // Store the token and navigate to home
                     }
                     else {
-                        result.value = { message: 'Token missing in response', isError: true }
+                        result.value = { message: 'Token missing in response', is_error: true }
                     }
                 }
             }
@@ -139,11 +139,11 @@
             if (error.response) {
                 result.value = {
                     message: error.response.data.error || 'An unexpected error occurred',
-                    isError: true
+                    is_error: true
                 }
             }
             else {
-                result.value = { message: 'Failed to connect to the server', isError: true }
+                result.value = { message: 'Failed to connect to the server', is_error: true }
             }
         }
     }

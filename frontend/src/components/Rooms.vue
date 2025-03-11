@@ -118,6 +118,8 @@ li:hover {
 
 .selected {
     color: var(--vue-green);
+    text-decoration: none;
+    cursor: default;
     font-size: 18pt;
 }
 

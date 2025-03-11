@@ -268,26 +268,26 @@ void defineRoomMethods(httplib::Server& svr, ChatRoomDB& database) {
 
     /*
     // Remove admin
-    svr.Patch("/rooms/remove_admin", [&database](const httplib::Request& req, httplib::Response& res) {
+    svr.Patch("/rooms/remove-admin", [&database](const httplib::Request& req, httplib::Response& res) {
         setCommonHeaders(res);
         removeAdmin(req, res, database);
     });
 
     // Make user admin
-    svr.Patch("/rooms/make_admin", [&database](const httplib::Request& req, httplib::Response& res) {
+    svr.Patch("/rooms/make-admin", [&database](const httplib::Request& req, httplib::Response& res) {
         setCommonHeaders(res);
         makeUserAdmin(req, res, database);
     });
 
     // Remove user from room
-    svr.Patch("/rooms/remove_user", [&database](const httplib::Request& req, httplib::Response& res) {
+    svr.Patch("/rooms/remove-user", [&database](const httplib::Request& req, httplib::Response& res) {
         setCommonHeaders(res);
         removeUserFromRoom(req, res, database);
     });
     */
 
     // Add user to room
-    svr.Patch("/rooms/add_user", [&database](const httplib::Request& req, httplib::Response& res) {
+    svr.Patch("/rooms/add-user", [&database](const httplib::Request& req, httplib::Response& res) {
         std::cout << "adding user" << std::endl;
         setCommonHeaders(res);
 

@@ -148,6 +148,13 @@ void removeUserFromRoom(const httplib::Request& req, httplib::Response& res, Cha
 */
 
 json addUserToRoom(ChatRoomDB& database, CassUuid& user_uuid, CassUuid& room_uuid) {
+    if (roomExists(database, room_uuid) != 1) {
+        return { 
+            { "error", "Room does not exist" }, 
+            { "code", 400 } 
+        };
+    }
+
     const char* query = 
             "BEGIN BATCH "
             "UPDATE chat.rooms SET user_ids = user_ids + {?} WHERE room_id = ?; "
@@ -281,24 +288,33 @@ void defineRoomMethods(httplib::Server& svr, ChatRoomDB& database) {
 
     // Add user to room
     svr.Patch("/rooms/add_user", [&database](const httplib::Request& req, httplib::Response& res) {
+        std::cout << "adding user" << std::endl;
         setCommonHeaders(res);
+
+        std::string auth_header = req.get_header_value("Authorization");
+
+        std::optional<CassUuid> user_uuid_opt = getUserIdFromToken(auth_header);
+        if (!user_uuid_opt.has_value()) {
+            res.status = 401;
+            res.set_content(R"({"error": "Not authorized"})", "application/json");
+            return;
+        }
+
+        CassUuid user_uuid = user_uuid_opt.value();
 
         const json body = json::parse(req.body);
 
-        if (!hasFields(body, { "room_id", "user_id" })) {
+        if (!hasFields(body, { "room_id" })) {
             res.status = 400; 
             res.set_content(R"({"error": "Missing required fields"})", "application/json");
             return;
         }
 
         const std::string room_id = body["room_id"];
-        const std::string user_id = body["user_id"];
 
         CassUuid room_uuid;
-        CassUuid user_uuid;
 
-        if (cass_uuid_from_string(room_id.c_str(), &room_uuid) != CASS_OK ||
-            cass_uuid_from_string(user_id.c_str(), &user_uuid) != CASS_OK) {
+        if (cass_uuid_from_string(room_id.c_str(), &room_uuid) != CASS_OK) {
             res.status = 400;
             res.set_content(R"({"error": "Invalid parameter format"})", "application/json");
             return;

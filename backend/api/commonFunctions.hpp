@@ -23,6 +23,26 @@ void setCommonHeaders(httplib::Response& res) {
     return;
 }
 
+int roomExists(ChatRoomDB& database, const CassUuid& room_uuid) {
+    const char* query = "SELECT COUNT(*) FROM chat.rooms WHERE room_id = ?;"; 
+    CassStatement* statement = cass_statement_new(query, 1);
+    cass_statement_bind_uuid(statement, 0, room_uuid);
+
+    const json result = database.SelectQuery(statement);
+
+    if (result.empty() || !result[0].contains("count")) {
+        // Failed to determine if room exists
+        return -1;
+    }
+    else if (result[0]["count"] == 0) {
+        // Room does not exist
+        return 0;
+    }
+
+    // Room exists
+    return 1;
+}
+
 bool hasFields(const json& body, const std::vector<std::string>& required_fields) {
     for (const auto& field : required_fields) {
         if (!body.contains(field)) {

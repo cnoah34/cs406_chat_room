@@ -7,7 +7,19 @@
 
 
 <script setup>
+    import { onMounted } from 'vue'
+    import { isAuthenticated } from '@/auth'
+    import { useRouter } from 'vue-router'
     import Login from '../components/Login.vue'
+    import { login } from '@/auth'
+
+    const router = useRouter()
+
+    onMounted(() => {
+        if (isAuthenticated.value) {
+            login(localStorage.getItem('token'), router)
+        }
+    })
 </script>
 
 

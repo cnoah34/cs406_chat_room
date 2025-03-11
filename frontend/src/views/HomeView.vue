@@ -14,6 +14,7 @@
 
 <style scoped>
 .home {
+    background-color: var(--vt-c-black);
     display: flex;
     flex-direction: row;
     height: 85vh;

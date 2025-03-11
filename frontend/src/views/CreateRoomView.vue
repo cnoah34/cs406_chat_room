@@ -1,18 +1,20 @@
 <template>
-    <div class='parent-container'> 
-        <RouterView />
+    <div class="parent">
+        <p>Hi mom</p>
     </div>
 </template>
 
 
 <script setup>
-    import { RouterView } from 'vue-router'
 </script>
 
 
 <style scoped>
-.parent-container {
+.parent {
+    background-color: var(--vt-c-black);
     display: flex;
     flex-direction: column;
 }
+
+
 </style>

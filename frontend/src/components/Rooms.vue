@@ -2,9 +2,14 @@
     <div class="rooms">
         <div class="header">
             <h1 style="color: white;">Your rooms</h1>
-            <router-link to=/create-room class="add-room-link">+</router-link>
+            <button @click="show_add_room = !show_add_room" class="add-room-button">{{ show_add_room
+                ? 'X' : '+' }}</button>
         </div>
-        <ul>
+        <div v-if="show_add_room" class="popup-parent">
+            <router-link to="/create-room" class="room-link">Create a Room</router-link>
+            <router-link to="/join-room" class="room-link">Join a Room</router-link>
+        </div>
+        <ul v-else>
             <li v-for="room in rooms" :key="room.room_id" @click="selectRoom(room)"
                 :class="{ selected: userStore.current_room && room.room_id === userStore.current_room.room_id }">
                 {{ room.name }}
@@ -27,6 +32,7 @@
     const userStore = useUserStore()
 
     const rooms = ref([])
+    const show_add_room = ref(false)
 
     const getRoom = async (room_id) => {
         try {
@@ -113,7 +119,7 @@ li:hover {
     font-size: 18pt;
 }
 
-.add-room-link {
+.add-room-button {
     font-size: 20pt;
     color: white;
     min-width: 70px;
@@ -126,7 +132,29 @@ li:hover {
     cursor: pointer;
 }
 
-.add-room-link:hover {
+.add-room-button:hover {
+    color: var(--foreground);
+    background-color: var(--vue-green)
+}
+
+.popup-parent {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.room-link {
+    color: white;
+    margin-top: 10%;
+    min-width: 75%;
+    text-align: center;
+    border: var(--vue-green) solid 3px;
+    font-size: 18pt;
+    text-decoration: none;
+}
+
+.room-link:hover {
     color: var(--foreground);
     background-color: var(--vue-green)
 }

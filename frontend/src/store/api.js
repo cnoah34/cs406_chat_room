@@ -52,7 +52,7 @@ export const useWebSocketStore = defineStore('websocket', {
             }
         },
         closeConnection() {
-            if (this.socket && this.is_connected) {
+            if (this.socket instanceof WebSocket && this.is_connected) {
                 this.socket.close()
                 this.is_connected = false
 

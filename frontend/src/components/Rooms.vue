@@ -76,7 +76,6 @@
 
 
 <style scoped>
-
 .rooms {
     display: flex;
     flex-direction: column;
@@ -101,6 +100,16 @@ ul {
     margin: 0;
     padding: 0;
     overflow-y: auto;
+    flex-grow: 1;
+    scrollbar-color: white var(--foreground);
+}
+
+ul::-webkit-scrollbar-thumb {
+    background: white;
+}
+
+ul::-webkit-scrollbar-track {
+    background: var(--foreground);
 }
 
 li {
@@ -146,6 +155,7 @@ li:hover {
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    min-width: 18vw;
 }
 
 .room-link {
@@ -162,5 +172,6 @@ li:hover {
     color: var(--foreground);
     background-color: var(--vue-green)
 }
+
 
 </style>

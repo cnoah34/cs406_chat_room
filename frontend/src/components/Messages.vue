@@ -2,9 +2,7 @@
     <div class="container">
         <div class="messages-container" @scroll="handleScroll">
             <p v-if="!userStore.current_room" class="placeholder">Choose a room</p>
-
-            <p v-else-if="userStore.current_room && !loading.value && !messages.length"
-               class="placeholder">
+            <p v-else-if="!messages.length && !loading.value" class="placeholder">
             There are no messages, be the first!
             </p>
 

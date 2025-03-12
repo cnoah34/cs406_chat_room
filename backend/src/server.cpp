@@ -60,10 +60,10 @@ int main() {
     std::thread websocket_server_thread([&ws_manager, websocket_port]() {
         uWS::App().ws<UserData>("/ws", {
             .open = [&](uWS::WebSocket<false, true, UserData>* ws) {
-                std::cout << "New websocket connection" << std::endl;
+                //std::cout << "New websocket connection" << std::endl;
             },
             .message = [&](uWS::WebSocket<false, true, UserData>* ws, std::string_view message, uWS::OpCode op_code) {
-                std::cout << "Received message: "<< message << std::endl;
+                //std::cout << "Received message: "<< message << std::endl;
 
                 json body = json::parse(message);
 
@@ -86,7 +86,7 @@ int main() {
                 }
             },
             .close = [&](uWS::WebSocket<false, true, UserData>* ws, int code, std::string_view message) {
-                std::cout << "Websocket closed" << std::endl;
+                //std::cout << "Websocket closed" << std::endl;
                 UserData* user_data = ws->getUserData();
                 if (!user_data) {
                     return;

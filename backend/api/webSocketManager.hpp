@@ -25,7 +25,7 @@ class WebSocketManager {
         void addUserToRoom(const std::string& room_id, uWS::WebSocket<false, true, UserData>* ws) {
             std::lock_guard<std::mutex> lock(rooms_mutex);
             rooms[room_id].insert(ws);
-            std::cout << "User added to room: " << room_id << std::endl;
+            //std::cout << "User added to room: " << room_id << std::endl;
         }
 
         void removeUserFromRoom(const std::string& room_id, uWS::WebSocket<false, true, UserData>* ws) {
@@ -36,11 +36,11 @@ class WebSocketManager {
             if (it != rooms.end()) {
                 it->second.erase(ws);
 
-                std::cout << "User removed from room: " << room_id << std::endl;
+                //std::cout << "User removed from room: " << room_id << std::endl;
 
                 if (it->second.empty()) {
                     rooms.erase(room_id);
-                    std::cout << "Room erased: " << room_id << std::endl;
+                    //std::cout << "Room erased: " << room_id << std::endl;
                 }
             }
         }
@@ -52,7 +52,7 @@ class WebSocketManager {
 
             if (it != rooms.end()) {
                 for (const auto& ws : it->second) {
-                    std::cout << "Sending: " << message << std::endl;
+                    //std::cout << "Sending: " << message << std::endl;
                     ws->send(message.c_str(), uWS::OpCode::TEXT);
                 }
             }

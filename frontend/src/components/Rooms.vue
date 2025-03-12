@@ -22,6 +22,7 @@
 <script setup>
     import { ref, onMounted } from 'vue'
     import { RouterLink, RouterView, useRouter } from 'vue-router'
+    import { fetchUserData } from '@/auth'
     import { useUserStore } from '@/store/user'
     import { useApiStore, useWebSocketStore } from '@/store/api'
     import axios from 'axios'
@@ -63,10 +64,10 @@
         userStore.current_room = room
     }
 
-    onMounted(() => {
+    onMounted( async () => {
         rooms.value = []
-        
-        // TODO: Query rooms here
+
+        await fetchUserData()
 
         userStore.room_ids.forEach(room_id => {
             getRoom(room_id)
@@ -99,6 +100,7 @@ ul {
     list-style-type: none;
     margin: 0;
     padding: 0;
+    margin-bottom: 15px;
     overflow-y: auto;
     flex-grow: 1;
     scrollbar-color: white var(--foreground);

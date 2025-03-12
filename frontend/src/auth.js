@@ -4,7 +4,7 @@ import { useApiStore, useWebSocketStore } from '@/store/api'
 import { useUserStore } from '@/store/user'
 
 
-async function fetchUserData() {
+export async function fetchUserData() {
     try {
         const apiStore = useApiStore()
         const response = await axios.get(`${apiStore.rest_url}/users/metadata`, {

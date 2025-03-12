@@ -13,7 +13,7 @@
 
 <script setup>
     import { RouterLink, RouterView, useRouter } from 'vue-router'
-    import { isAuthenticated, logout } from '../auth'
+    import { isAuthenticated, logout, fetchUserData } from '../auth'
     import Rooms from '../components/Rooms.vue'
     import Messages from '../components/Messages.vue'
 
@@ -22,7 +22,6 @@
     const handleLogout = () => {
         logout(router)
     }
-
 </script>
 
 

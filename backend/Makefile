@@ -1,6 +1,6 @@
 # Compiler flags
 CC=g++
-CFLAGS=-Wall -Wextra
+CFLAGS=-Wall -Wextra -DWITH_OPENSSL=1
 
 # VCPKG for jwt-cpp
 VCPKG_DIR=/home/colby/vcpkg/installed/x64-linux
@@ -11,7 +11,8 @@ VCPKG_LIB=$(VCPKG_DIR)/lib
 INCLUDE=-I./include \
 	-I./database \
 	-I./api \
-	-isystem$(VCPKG_INCLUDE)
+	-isystem$(VCPKG_INCLUDE) \
+	-I$(VCPKG_INCLUDE)/openssl
 
 # ScyllaDB linking
 SCYLLA_LIB=./include/cpp-driver/build/libscylla-cpp-driver.so -Wl,-rpath,./include/cpp-driver/build/
@@ -20,7 +21,7 @@ SCYLLA_LIB=./include/cpp-driver/build/libscylla-cpp-driver.so -Wl,-rpath,./inclu
 LIBS=-lbcrypt -lssl -lcrypto -ldl -lz -luSockets
 
 # For VCPKG installed libraries
-LDFLAGS=-L$(VCPKG_LIB)
+LDFLAGS=-L$(VCPKG_LIB) -L$(VCPKG_LIB)/openssl
 
 all: server
 

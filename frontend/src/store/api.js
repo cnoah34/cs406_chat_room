@@ -20,7 +20,7 @@ export const useWebSocketStore = defineStore('websocket', {
                 this.closeConnection()
             }
 
-            this.socket = new WebSocket(`ws://localhost:8081/`)
+            this.socket = new WebSocket(`ws://localhost:8081/ws`)
             
             this.socket.onopen = () => {
                 console.log('Connected to websocket server')

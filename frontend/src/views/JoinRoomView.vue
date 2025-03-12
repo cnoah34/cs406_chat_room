@@ -1,15 +1,18 @@
 <template>
     <div class="parent">
-        <h1 style="color: var(--vue-green);">Join a Room</h1>
-        <form @submit.prevent="handleSubmit" autocomplete="off">
-            <label for="room_name">Room ID</label>
-            <input type="text" id="room_id" v-model="room_id"
-                                              placeholder="Enter the room ID" />
+        <router-link to="/home" class="back">Back</router-link>
+        <div class="container">
+            <h1 style="color: var(--vue-green);">Join a Room</h1>
+            <form @submit.prevent="handleSubmit" autocomplete="off">
+                <label for="room_name">Room ID</label>
+                <input type="text" id="room_id" v-model="room_id"
+                                                  placeholder="Enter the room ID" />
 
-            <button type="submit">Submit</button>
-        </form>
-        <p v-if="result.message" :class="{'error': result.is_error, 
-                 'success': !result.is_error}">{{ result.message }}</p>
+                <button type="submit" class="submit">Submit</button>
+            </form>
+            <p v-if="result.message" :class="{'error': result.is_error, 
+                     'success': !result.is_error}">{{ result.message }}</p>
+        </div>
     </div>
 </template>
 
@@ -17,10 +20,9 @@
 <script setup>
     import { ref } from 'vue'
     import axios from 'axios'
-    import { useRouter } from 'vue-router'
+    import { RouterLink } from 'vue-router'
     import { useApiStore } from '@/store/api'
 
-    const router = useRouter()
     const apiStore = useApiStore()
     
     const room_id = ref('')
@@ -63,7 +65,6 @@
             }
         }
     }
-
 </script>
 
 
@@ -75,11 +76,36 @@
     transform: translate(-50%, -50%);
     display: flex;
     flex-direction: column;
-    align-self: center;
-    align-items: center;
-    padding: 20px;
-    height: 38vh;
+    height: 50vh;
     width: 25vw;
+}
+
+.back {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 80px;
+    height: 40px;
+    font-size: 14pt;
+    background-color: var(--foreground);
+    border: 3px solid var(--vue-green);
+    border-bottom: none;
+    color: white;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.back:hover {
+    background-color: var(--vue-green);
+    color: var(--foreground);
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 340px;
+    padding: 20px;
     background-color: var(--vt-c-black);
     border: 3px solid var(--vue-green);
     background-color: var(--foreground);
@@ -92,7 +118,7 @@ h1 {
 form {
     display: flex;
     flex-direction: column;
-    width: 80%;
+    width: 90%;
 }
 
 form label {
@@ -110,7 +136,7 @@ form input:focus {
     outline: none;
 }
 
-button {
+.submit {
     width: 100%;
     font-size: 18pt;
     padding: 10px;
@@ -121,7 +147,7 @@ button {
     margin-bottom: 30px;
 }
 
-button:hover {
+.submit:hover {
     background-color: var(--vue-green);
 }
 

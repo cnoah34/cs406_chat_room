@@ -288,7 +288,6 @@ void defineRoomMethods(httplib::Server& svr, ChatRoomDB& database) {
 
     // Add user to room
     svr.Patch("/rooms/add-user", [&database](const httplib::Request& req, httplib::Response& res) {
-        std::cout << "adding user" << std::endl;
         setCommonHeaders(res);
 
         std::string auth_header = req.get_header_value("Authorization");

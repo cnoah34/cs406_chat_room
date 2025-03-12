@@ -1,3 +1,5 @@
+#define CPPHTTPLIB_OPENSSL_SUPPORT
+
 #include <iostream>
 #include <string>
 #include <thread>
@@ -41,7 +43,11 @@ int main() {
     WebSocketManager ws_manager;
 
     std::thread rest_server_thread([&database, &ws_manager, &rest_port]() {
-        httplib::Server svr;
+        httplib::SSLServer svr("./cert.pem", "./key.pem");
+
+        if (!svr.is_valid()) {
+            std::cout << "Fail" << std::endl;
+        }
 
         svr.Options(R"(/.*)", [](const httplib::Request&, httplib::Response& res) {
             setCommonHeaders(res);
@@ -58,50 +64,59 @@ int main() {
     });
 
     std::thread websocket_server_thread([&ws_manager, websocket_port]() {
-        uWS::App().ws<UserData>("/ws", {
-            .open = [&](uWS::WebSocket<false, true, UserData>* ws) {
-                //std::cout << "New websocket connection" << std::endl;
-            },
-            .message = [&](uWS::WebSocket<false, true, UserData>* ws, std::string_view message, uWS::OpCode op_code) {
-                //std::cout << "Received message: "<< message << std::endl;
+        uWS::SSLApp ssl_app({
+            .key_file_name = "./key.pem",
+            .cert_file_name = "./cert.pem"
+        });
 
-                json body = json::parse(message);
+        uWS::TemplatedApp<true>::WebSocketBehavior<UserData> ws_behavior;
 
-                if (body.contains("room_id")) {
-                    UserData* user_data = ws->getUserData();
-                    if (!user_data) {
-                        return;
-                    }
+        ws_behavior.close = [&](uWS::WebSocket<true, true, UserData>* ws, int code, std::string_view message) {
+            //std::cout << "Websocket closed" << std::endl;
+            UserData* user_data = ws->getUserData();
+            if (!user_data) {
+                return;
+            }
+            
+            ws_manager.removeUserFromRoom(user_data->room_id, ws);
+        };
 
-                    if (!user_data->room_id.empty()) {
-                        ws_manager.removeUserFromRoom(user_data->room_id, ws);
-                    }
+        ws_behavior.message = [&](uWS::WebSocket<true, true, UserData>* ws, std::string_view message, uWS::OpCode op_code) {
+            //std::cout << "Received message: "<< message << std::endl;
 
-                    user_data->room_id = body["room_id"];
+            json body = json::parse(message);
 
-                    ws_manager.addUserToRoom(body["room_id"], ws);
-                }
-                else if (body.contains("message") && body["message"].contains("room_id")) {
-                    ws_manager.broadcastToRoom(body["message"]["room_id"], body["message"]);
-                }
-            },
-            .close = [&](uWS::WebSocket<false, true, UserData>* ws, int code, std::string_view message) {
-                //std::cout << "Websocket closed" << std::endl;
+            if (body.contains("room_id")) {
                 UserData* user_data = ws->getUserData();
                 if (!user_data) {
                     return;
                 }
-                
-                ws_manager.removeUserFromRoom(user_data->room_id, ws);
+
+                if (!user_data->room_id.empty()) {
+                    ws_manager.removeUserFromRoom(user_data->room_id, ws);
+                }
+
+                user_data->room_id = body["room_id"];
+
+                ws_manager.addUserToRoom(body["room_id"], ws);
             }
-        }).listen(websocket_port, [&](auto* token) {
-            if (token) {
+            else if (body.contains("message") && body["message"].contains("room_id")) {
+                ws_manager.broadcastToRoom(body["message"]["room_id"], body["message"]);
+            }
+        };
+
+        ssl_app.ws<UserData>("/", std::move(ws_behavior));
+
+        ssl_app.listen(websocket_port, [&](auto* listen_socket) {
+            if (listen_socket) {
                 std::cout << "Websocket server listening on port: " << websocket_port << std::endl;
             }
             else {
                 std::cerr << "Failed to start websocket server on port: " << websocket_port << std::endl;
             }
-        }).run();
+        });
+
+        ssl_app.run();
     });
 
     rest_server_thread.join();

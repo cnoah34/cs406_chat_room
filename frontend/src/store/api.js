@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 
 export const useApiStore = defineStore('api', {
     state: () => ({
-        rest_url: 'http://localhost:8080',
+        rest_url: 'https://localhost:8080',
     }),
     persist: true,
 })
@@ -20,7 +20,7 @@ export const useWebSocketStore = defineStore('websocket', {
                 this.closeConnection()
             }
 
-            this.socket = new WebSocket(`ws://localhost:8000/ws`)
+            this.socket = new WebSocket(`ws://localhost:8081/`)
             
             this.socket.onopen = () => {
                 console.log('Connected to websocket server')

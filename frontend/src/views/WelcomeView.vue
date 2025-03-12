@@ -11,13 +11,19 @@
     import { isAuthenticated } from '@/auth'
     import { useRouter } from 'vue-router'
     import Login from '../components/Login.vue'
-    import { login } from '@/auth'
+    import { login, verifyToken } from '@/auth'
 
     const router = useRouter()
 
-    onMounted(() => {
+    onMounted( async () => {
+        const token = localStorage.getItem('token')
+            
+        if (token) {
+            await verifyToken()
+        }
+
         if (isAuthenticated.value) {
-            login(localStorage.getItem('token'), router)
+            login(token, router)
         }
     })
 </script>

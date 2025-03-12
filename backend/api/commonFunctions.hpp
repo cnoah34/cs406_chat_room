@@ -53,12 +53,48 @@ bool hasFields(const json& body, const std::vector<std::string>& required_fields
     return true;
 }
 
-std::optional<CassUuid> getUserIdFromToken(const std::string& authHeader) {
-    if (authHeader.empty() || authHeader.find("Bearer ") != 0) {
+bool verifyToken(const std::string& auth_header) {
+    if (auth_header.empty() || auth_header.find("Bearer ") != 0) {
+        return false;
+    }
+
+    std::string token = auth_header.substr(7);
+
+    try {
+        const char* secret_cstr = std::getenv("JWT_SECRET");
+        if (!secret_cstr) {
+            std::cerr << "JWT secret not found in environment variables" << std::endl;
+            return false;
+        }
+
+        std::string secret(secret_cstr);
+        if (secret.empty()) {
+            return false;
+        }
+
+        auto decoded = jwt::decode(token);
+
+        auto verifier = jwt::verify()
+            .allow_algorithm(jwt::algorithm::hs256{secret})
+            .with_issuer("chat_rooms");
+
+        verifier.verify(decoded);
+        
+        return true;
+    }
+    catch (const std::exception& e) {
+        return false;
+    }
+    
+    return false;
+}
+
+std::optional<CassUuid> getUserIdFromToken(const std::string& auth_header) {
+    if (auth_header.empty() || auth_header.find("Bearer ") != 0) {
         return std::nullopt;
     }
 
-    std::string token = authHeader.substr(7);
+    std::string token = auth_header.substr(7);
 
     try {
         const char* secret_cstr = std::getenv("JWT_SECRET");

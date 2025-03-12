@@ -288,6 +288,22 @@ void defineUserMethods(httplib::Server& svr, ChatRoomDB& database) {
         }
     });
 
+    svr.Post("/verify-token", [&database](const httplib::Request& req, httplib::Response& res) {
+        setCommonHeaders(res);
+
+        std::string auth_header = req.get_header_value("Authorization");
+
+        if (!auth_header.empty() && verifyToken(auth_header)) {
+            res.status = 204;
+        }
+        else {
+            res.status = 401;
+            res.set_content(R"({"error": "Not authorized"})", "application/json");
+        }
+
+        return;
+    });
+
     svr.Delete("/users", [&database](const httplib::Request& req, httplib::Response& res) {
         setCommonHeaders(res);
 

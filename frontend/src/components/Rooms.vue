@@ -101,6 +101,7 @@ ul {
     margin: 0;
     padding: 0;
     margin-bottom: 15px;
+    min-width: 18vw;
     overflow-y: auto;
     flex-grow: 1;
     scrollbar-color: white var(--foreground);
@@ -116,6 +117,7 @@ ul::-webkit-scrollbar-track {
 
 li {
     padding-left: 20px;
+    padding-right: 20px;
     color: white;
     cursor: pointer;
     text-decoration: underline;

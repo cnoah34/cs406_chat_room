@@ -1,7 +1,9 @@
 <template>
     <div class="parent">
         <nav>
-            <button v-if='isAuthenticated' @click='handleLogout'>Logout</button>
+            <button v-if="isAuthenticated" @click="handleLogout" class="logout">Logout</button>
+            <router-link to="/room-options" v-if="userStore.current_room" class="room-options">
+                Room Options</router-link>
         </nav>
         <div class="home">
             <Rooms class="left" />
@@ -13,11 +15,13 @@
 
 <script setup>
     import { RouterLink, RouterView, useRouter } from 'vue-router'
-    import { isAuthenticated, logout, fetchUserData } from '../auth'
+    import { isAuthenticated, logout, fetchUserData } from '@/auth'
+    import { useUserStore } from '@/store/user'
     import Rooms from '../components/Rooms.vue'
     import Messages from '../components/Messages.vue'
 
     const router = useRouter()
+    const userStore = useUserStore()
 
     const handleLogout = () => {
         logout(router)
@@ -34,10 +38,12 @@
 nav {
     display: flex;
     flex-direction: row-reverse;
+    max-height: 40px;
 }
 
-button {
+.logout {
     width: 80px;
+    height: 40px;
     font-size: 16pt;
     background-color: var(--foreground);
     border: 3px solid var(--vue-green);
@@ -46,7 +52,28 @@ button {
     cursor: pointer;
 }
 
-button:hover {
+.logout:hover {
+    background-color: var(--vue-green);
+    color: var(--foreground);
+}
+
+.room-options {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 140px;
+    height: 40px;
+    font-size: 14pt;
+    background-color: var(--foreground);
+    border: 3px solid var(--vue-green);
+    border-right: none;
+    border-bottom: none;
+    color: white;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.room-options:hover {
     background-color: var(--vue-green);
     color: var(--foreground);
 }

@@ -138,7 +138,7 @@ std::optional<CassUuid> getUserIdFromToken(const std::string& auth_header) {
 }
 
 bool isOwner(ChatRoomDB& database, const CassUuid& room_uuid, const CassUuid& user_uuid) {
-    const char* query = "SELECT COUNT(*) FROM chat.rooms WHERE room_id = ? AND owner_id = ?;";
+    const char* query = "SELECT COUNT(*) FROM chat.rooms WHERE room_id = ? AND owner_id = ? ALLOW FILTERING;";
     CassStatement* statement = cass_statement_new(query, 2);
     cass_statement_bind_uuid(statement, 0, room_uuid);
     cass_statement_bind_uuid(statement, 1, user_uuid);
@@ -156,7 +156,7 @@ bool isOwner(ChatRoomDB& database, const CassUuid& room_uuid, const CassUuid& us
 }
 
 bool isAdmin(ChatRoomDB& database, const CassUuid& room_uuid, const CassUuid& user_uuid) {
-    const char* query = "SELECT COUNT(*) FROM chat.rooms WHERE room_id = ? AND admin_ids CONTAINS ?;";
+    const char* query = "SELECT COUNT(*) FROM chat.rooms WHERE room_id = ? AND admin_ids CONTAINS ? ALLOW FILTERING;";
     CassStatement* statement = cass_statement_new(query, 2);
     cass_statement_bind_uuid(statement, 0, room_uuid);
     cass_statement_bind_uuid(statement, 1, user_uuid);

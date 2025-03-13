@@ -47,7 +47,8 @@
                     headers: { 
                         Authorization: `Bearer ${localStorage.getItem('token')}`
                     }
-                })
+                }
+            )
 
             if (response.status == 200 || response.status == 204) {
                 created_room.value = true

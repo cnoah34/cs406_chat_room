@@ -3,12 +3,12 @@
 
 #include <commonFunctions.hpp>
 
-json getRoomDetails(ChatRoomDB& database, const CassUuid& room_id) {
+json getRoomDetails(ChatRoomDB& database, const CassUuid& room_uuid) {
     const char* query = "SELECT name, created_at FROM chat.rooms "
         "WHERE room_id = ?;";
 
     CassStatement* statement = cass_statement_new(query, 1);
-    cass_statement_bind_uuid(statement, 0, room_id);
+    cass_statement_bind_uuid(statement, 0, room_uuid);
 
     const json result = database.SelectQuery(statement);
 
@@ -20,6 +20,23 @@ json getRoomDetails(ChatRoomDB& database, const CassUuid& room_id) {
     }
 
     return result[0];
+}
+
+json getPrivilegeLevel(ChatRoomDB& database, const CassUuid& room_uuid, const CassUuid& user_uuid) {
+    if (isOwner(database, room_uuid, user_uuid)) {
+        return {{ "level", "Owner" }};
+    }
+    else if (isAdmin(database, room_uuid, user_uuid)) {
+        return {{ "level", "Admin" }};
+    }
+    else if (isInRoom(database, room_uuid, user_uuid)) {
+        return {{ "level", "User" }};
+    }
+
+    return { 
+        { "error", "User does not belong to room" }, 
+        { "code", 401 } 
+    };
 }
 
 /*
@@ -98,27 +115,14 @@ void makeUserAdmin(const httplib::Request& req, httplib::Response& res, ChatRoom
     res.status = 204;
     return;
 }
+*/
 
-void removeUserFromRoom(const httplib::Request& req, httplib::Response& res, ChatRoomDB& database) {
-    const json body = json::parse(req.body);
-
-    if (!hasFields(body, { "room_id", "user_id" })) {
-        res.status = 400; 
-        res.set_content(R"({"error": "Missing required fields"})", "application/json");
-        return;
-    }
-
-    const std::string room_id = body["room_id"];
-    const std::string user_id = body["user_id"];
-
-    CassUuid room_uuid;
-    CassUuid user_uuid;
-
-    if (cass_uuid_from_string(room_id.c_str(), &room_uuid) != CASS_OK ||
-        cass_uuid_from_string(user_id.c_str(), &user_uuid) != CASS_OK) {
-        res.status = 400;
-        res.set_content(R"({"error": "Invalid parameter format"})", "application/json");
-        return;
+json removeUserFromRoom(ChatRoomDB& database, const CassUuid& room_uuid, const CassUuid& user_uuid) {
+    if (isOwner(database, room_uuid, user_uuid)) {
+        return { 
+            { "error", "Owner cannot be removed" }, 
+            { "code", 400 } 
+        };
     }
 
     const char* query = 
@@ -137,15 +141,14 @@ void removeUserFromRoom(const httplib::Request& req, httplib::Response& res, Cha
     cass_statement_bind_uuid(statement, 5, user_uuid);
 
     if (!database.ModifyQuery(statement)) {
-        res.status = 500;
-        res.set_content(R"({"error": "Internal server error"})", "application/json");
-        return;
+        return { 
+            { "error", "Internal server error" }, 
+            { "code", 500 } 
+        };
     }
 
-    res.status = 204;
-    return;
+    return {};
 }
-*/
 
 json addUserToRoom(ChatRoomDB& database, CassUuid& user_uuid, CassUuid& room_uuid) {
     if (roomExists(database, room_uuid) != 1) {
@@ -266,6 +269,42 @@ void defineRoomMethods(httplib::Server& svr, ChatRoomDB& database) {
         }
     });
 
+    svr.Get("/rooms/privilege/:room_id/", [&database](const httplib::Request& req, httplib::Response& res) {
+        setCommonHeaders(res);
+
+        std::string auth_header = req.get_header_value("Authorization");
+
+        std::optional<CassUuid> user_uuid_opt = getUserIdFromToken(auth_header);
+        if (!user_uuid_opt.has_value()) {
+            res.status = 401;
+            res.set_content(R"({"error": "Not authorized"})", "application/json");
+            return;
+        }
+
+        CassUuid user_uuid = user_uuid_opt.value();
+
+        const std::string room_id = req.path_params.at("room_id");
+        CassUuid room_uuid;
+
+        if (room_id.empty() || cass_uuid_from_string(room_id.c_str(), &room_uuid ) != CASS_OK) {
+            res.status = 400;
+            res.set_content(R"({"error": "Missing required fields"})", "application/json");
+            return;
+        }
+
+        json result = getPrivilegeLevel(database, room_uuid, user_uuid);
+
+        if (result.contains("error")) {
+            json error = {{ "error", result["error"] }};
+            res.status = result["code"];
+            res.set_content(error.dump(), "application/json");
+        }
+        else {
+            res.status = 200;
+            res.set_content(result.dump(), "application/json");
+        }
+    });
+
     /*
     // Remove admin
     svr.Patch("/rooms/remove-admin", [&database](const httplib::Request& req, httplib::Response& res) {
@@ -278,13 +317,108 @@ void defineRoomMethods(httplib::Server& svr, ChatRoomDB& database) {
         setCommonHeaders(res);
         makeUserAdmin(req, res, database);
     });
-
-    // Remove user from room
-    svr.Patch("/rooms/remove-user", [&database](const httplib::Request& req, httplib::Response& res) {
-        setCommonHeaders(res);
-        removeUserFromRoom(req, res, database);
-    });
     */
+
+    // Leave a chat room
+    svr.Patch("/rooms/leave-room", [&database](const httplib::Request& req, httplib::Response& res) {
+        setCommonHeaders(res);
+
+        std::string auth_header = req.get_header_value("Authorization");
+
+        std::optional<CassUuid> user_uuid_opt = getUserIdFromToken(auth_header);
+        if (!user_uuid_opt.has_value()) {
+            res.status = 401;
+            res.set_content(R"({"error": "Not authorized"})", "application/json");
+            return;
+        }
+
+        CassUuid user_uuid = user_uuid_opt.value();
+
+        const json body = json::parse(req.body);
+
+        if (!hasFields(body, { "room_id" })) {
+            res.status = 400; 
+            res.set_content(R"({"error": "Missing required fields"})", "application/json");
+            return;
+        }
+
+        const std::string room_id = body["room_id"];
+
+        CassUuid room_uuid;
+
+        if (cass_uuid_from_string(room_id.c_str(), &room_uuid) != CASS_OK) {
+            res.status = 400;
+            res.set_content(R"({"error": "Invalid parameter format"})", "application/json");
+            return;
+        }
+
+        json result = removeUserFromRoom(database, room_uuid, user_uuid);
+
+        if (result.contains("error")) {
+            json error = {{ "error", result["error"] }};
+            res.status = result["code"];
+            res.set_content(error.dump(), "application/json");
+        }
+        else {
+            res.status = 204;
+        }
+    });
+
+    // Remove a user from a chat room (privilege cannot exceed or match user making request) 
+    svr.Patch("/rooms/remove_user", [&database](const httplib::Request& req, httplib::Response& res) {
+        setCommonHeaders(res);
+
+        std::string auth_header = req.get_header_value("Authorization");
+
+        std::optional<CassUuid> user_uuid_opt = getUserIdFromToken(auth_header);
+        if (!user_uuid_opt.has_value()) {
+            res.status = 401;
+            res.set_content(R"({"error": "Not authorized"})", "application/json");
+            return;
+        }
+
+        CassUuid request_user_uuid = user_uuid_opt.value();
+
+        const json body = json::parse(req.body);
+
+        if (!hasFields(body, { "room_id", "user_id" })) {
+            res.status = 400; 
+            res.set_content(R"({"error": "Missing required fields"})", "application/json");
+            return;
+        }
+
+        const std::string room_id = body["room_id"];
+        const std::string to_remove_user_id = body["user_id"];
+
+        CassUuid room_uuid;
+        CassUuid to_remove_user_uuid;
+
+        if (cass_uuid_from_string(room_id.c_str(), &room_uuid) != CASS_OK ||
+            cass_uuid_from_string(to_remove_user_id.c_str(), &to_remove_user_uuid) != CASS_OK) {
+            res.status = 400;
+            res.set_content(R"({"error": "Invalid parameter format"})", "application/json");
+            return;
+        }
+
+        // Check if privilege levels work, only owner can remove admins
+        if (isAdmin(database, room_uuid, to_remove_user_uuid) && !isOwner(database, room_uuid, request_user_uuid)) {
+            res.status = 401;
+            res.set_content(R"({"error": "Only owner can remove admins"})", "application/json");
+            return;
+        }
+
+        json result = removeUserFromRoom(database, room_uuid, to_remove_user_uuid);
+
+        if (result.contains("error")) {
+            json error = {{ "error", result["error"] }};
+            res.status = result["code"];
+            res.set_content(error.dump(), "application/json");
+        }
+        else {
+            res.status = 204;
+        }
+    });
+
 
     // Add user to room
     svr.Patch("/rooms/add-user", [&database](const httplib::Request& req, httplib::Response& res) {

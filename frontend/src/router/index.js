@@ -4,12 +4,14 @@ import WelcomeView from '../views/WelcomeView.vue'
 import HomeView from '../views/HomeView.vue'
 import CreateRoomView from '../views/CreateRoomView.vue'
 import JoinRoomView from '../views/JoinRoomView.vue'
+import RoomOptionsView from '../views/RoomOptionsView.vue'
 
 const routes = [
     { path: '/', component: WelcomeView },
     { path: '/home', component: HomeView, meta: { requiresAuth: true } },
     { path: '/create-room', component: CreateRoomView, meta: { requiresAuth: true } },
     { path: '/join-room', component: JoinRoomView, meta: { requiresAuth: true } },
+    { path: '/room-options', component: RoomOptionsView, meta: { requiresAuth: true } },
 ]
 
 const router = createRouter ({

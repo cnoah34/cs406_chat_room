@@ -11,24 +11,23 @@ VCPKG_LIB=$(VCPKG_DIR)/lib
 INCLUDE=-I./include \
 	-I./database \
 	-I./api \
-	-isystem$(VCPKG_INCLUDE) \
-	-I$(VCPKG_INCLUDE)/openssl
+	-isystem$(VCPKG_INCLUDE)
 
 # ScyllaDB linking
 SCYLLA_LIB=./include/cpp-driver/build/libscylla-cpp-driver.so -Wl,-rpath,./include/cpp-driver/build/
 
 # Linking these
-LIBS=-lbcrypt -lssl -lcrypto -ldl -lz -luSockets
+LIBS=-lbcrypt -lz -lssl -lcrypto -ldl ./include/uSockets/*.o
 
 # For VCPKG installed libraries
-LDFLAGS=-L$(VCPKG_LIB) -L$(VCPKG_LIB)/openssl
+LDFLAGS=-L$(VCPKG_LIB)
 
 all: server
 
-server: ./src/server.o #$(HEADERS)
-	$(CC) $(CFLAGS) $(INCLUDE) ./src/server.o $(SCYLLA_LIB) $(LIBS) $(LDFLAGS) -o server.out #$(LDFLAGS)
+server: ./src/server.o
+	$(CC) $(CFLAGS) $(INCLUDE) ./src/server.o $(SCYLLA_LIB) $(LIBS) $(LDFLAGS) -o server.out
 
-./src/server.o: ./src/server.cpp #$(HEADERS)
+./src/server.o: ./src/server.cpp
 	$(CC) $(CFLAGS) $(INCLUDE) -c ./src/server.cpp -o ./src/server.o
 
 clean:

@@ -105,7 +105,7 @@ int main() {
             }
         };
 
-        ssl_app.ws<UserData>("/ws", std::move(ws_behavior));
+        ssl_app.ws<UserData>("/wss", std::move(ws_behavior));
 
         ssl_app.listen(websocket_port, [&](auto* listen_socket) {
             if (listen_socket) {

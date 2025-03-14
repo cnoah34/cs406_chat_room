@@ -57,6 +57,41 @@ json getUsernames(ChatRoomDB& database, const CassUuid& room_uuid) {
     return users_info;
 }
 
+json getAdminUsernames(ChatRoomDB& database, const CassUuid& room_uuid) {
+    const char* query = "SELECT admin_ids FROM chat.rooms WHERE room_id = ?";
+    CassStatement* statement = cass_statement_new(query, 1); 
+    cass_statement_bind_uuid(statement, 0, room_uuid);
+
+    const json result = database.SelectQuery(statement);
+
+    json admins_info;
+
+    if (!result[0].contains("admin_ids")) {
+        return { 
+            { "error", "Could not fetch user IDs" }, 
+            { "code", 404 } 
+        };
+    }
+
+    for (std::string user_id : result[0]["admin_ids"]) {
+        CassUuid user_uuid;
+
+        if (cass_uuid_from_string(user_id.c_str(), &user_uuid) != CASS_OK) {
+            break;
+        }
+
+        std::string username = getUsernameFromUserId(database, user_uuid);
+
+        if (username == "") {
+            break;
+        }
+
+        admins_info["admins_info"].push_back({{ "user_id", user_id }, { "username", username }});
+    }
+
+    return admins_info;
+}
+
 json getPrivilegeLevel(ChatRoomDB& database, const CassUuid& room_uuid, const CassUuid& user_uuid) {
     if (isOwner(database, room_uuid, user_uuid)) {
         return {{ "level", "Owner" }};
@@ -74,29 +109,7 @@ json getPrivilegeLevel(ChatRoomDB& database, const CassUuid& room_uuid, const Ca
     };
 }
 
-/*
-void removeAdmin(const httplib::Request& req, httplib::Response& res, ChatRoomDB& database) {
-    const json body = json::parse(req.body);
-
-    if (!hasFields(body, { "room_id", "user_id" })) {
-        res.status = 400; 
-        res.set_content(R"({"error": "Missing required fields"})", "application/json");
-        return;
-    }
-
-    const std::string room_id = body["room_id"];
-    const std::string user_id = body["user_id"];
-
-    CassUuid room_uuid;
-    CassUuid user_uuid;
-
-    if (cass_uuid_from_string(room_id.c_str(), &room_uuid) != CASS_OK ||
-        cass_uuid_from_string(user_id.c_str(), &user_uuid) != CASS_OK) {
-        res.status = 400;
-        res.set_content(R"({"error": "Invalid parameter format"})", "application/json");
-        return;
-    }
-
+json removeAdmin(ChatRoomDB& database, const CassUuid& room_uuid, const CassUuid& user_uuid) {
     const char* query = "UPDATE chat.rooms SET admin_ids = admin_ids - {?} WHERE room_id = ?;";
 
     CassStatement* statement = cass_statement_new(query, 2);
@@ -104,37 +117,16 @@ void removeAdmin(const httplib::Request& req, httplib::Response& res, ChatRoomDB
     cass_statement_bind_uuid(statement, 1, room_uuid);
 
     if (!database.ModifyQuery(statement)) {
-        res.status = 500;
-        res.set_content(R"({"error": "Internal server error"})", "application/json");
-        return;
+        return { 
+            { "error", "Internal server error" }, 
+            { "code", 500} 
+        };
     }
 
-    res.status = 204;
-    return;
+    return {};
 }
 
-void makeUserAdmin(const httplib::Request& req, httplib::Response& res, ChatRoomDB& database) {
-    const json body = json::parse(req.body);
-
-    if (!hasFields(body, { "room_id", "user_id" })) {
-        res.status = 400; 
-        res.set_content(R"({"error": "Missing required fields"})", "application/json");
-        return;
-    }
-
-    const std::string room_id = body["room_id"];
-    const std::string user_id = body["user_id"];
-
-    CassUuid room_uuid;
-    CassUuid user_uuid;
-
-    if (cass_uuid_from_string(room_id.c_str(), &room_uuid) != CASS_OK ||
-        cass_uuid_from_string(user_id.c_str(), &user_uuid) != CASS_OK) {
-        res.status = 400;
-        res.set_content(R"({"error": "Invalid parameter format"})", "application/json");
-        return;
-    }
-
+json makeAdmin(ChatRoomDB& database, const CassUuid& room_uuid, const CassUuid& user_uuid) {
     const char* query = "UPDATE chat.rooms SET admin_ids = admin_ids + {?} WHERE room_id = ?;";
 
     CassStatement* statement = cass_statement_new(query, 2);
@@ -142,15 +134,14 @@ void makeUserAdmin(const httplib::Request& req, httplib::Response& res, ChatRoom
     cass_statement_bind_uuid(statement, 1, room_uuid);
 
     if (!database.ModifyQuery(statement)) {
-        res.status = 500;
-        res.set_content(R"({"error": "Internal server error"})", "application/json");
-        return;
+        return { 
+            { "error", "Internal server error" }, 
+            { "code", 500} 
+        };
     }
 
-    res.status = 204;
-    return;
+    return {};
 }
-*/
 
 json removeUserFromRoom(ChatRoomDB& database, const CassUuid& room_uuid, const CassUuid& user_uuid) {
     if (isOwner(database, room_uuid, user_uuid)) {
@@ -216,6 +207,42 @@ json addUserToRoom(ChatRoomDB& database, CassUuid& user_uuid, CassUuid& room_uui
 }
 
 json deleteRoom(ChatRoomDB& database, CassUuid& room_uuid) {
+    // Remove the room_id from all user's set of room_ids
+    const char* get_users = "SELECT user_ids FROM chat.rooms WHERE room_id = ?";
+    CassStatement* get_users_statement = cass_statement_new(get_users, 1); 
+    cass_statement_bind_uuid(get_users_statement, 0, room_uuid);
+
+    const json users = database.SelectQuery(get_users_statement);
+
+    if (!users[0].contains("user_ids")) {
+        return { 
+            { "error", "Could not fetch user IDs to remove room from" }, 
+            { "code", 404 } 
+        };
+    }
+
+    const char* update_query = "UPDATE chat.users SET room_ids = room_ids - {?} WHERE user_id = ?;";
+
+    for (std::string user_id : users[0]["user_ids"]) {
+        CassUuid to_update_user_uuid;
+
+        if (cass_uuid_from_string(user_id.c_str(), &to_update_user_uuid) != CASS_OK) {
+            break;
+        }
+
+        CassStatement* update_statement = cass_statement_new(update_query, 2);
+        cass_statement_bind_uuid(update_statement, 0, room_uuid);
+        cass_statement_bind_uuid(update_statement, 1, to_update_user_uuid);
+
+        if (!database.ModifyQuery(update_statement)) {
+            return { 
+                { "error", "Internal server error" }, 
+                { "code", 500 } 
+            };
+        }
+    }
+
+    // Delete the actual room from the database
     const char* query = "DELETE FROM chat.rooms WHERE room_id = ?;";
 
     CassStatement* statement = cass_statement_new(query, 1);
@@ -329,6 +356,31 @@ void defineRoomMethods(httplib::Server& svr, ChatRoomDB& database) {
         }
     });
 
+    svr.Get("/rooms/admins/:room_id/", [&database](const httplib::Request& req, httplib::Response& res) {
+        setCommonHeaders(res);
+
+        const std::string room_id = req.path_params.at("room_id");
+        CassUuid room_uuid;
+
+        if (room_id.empty() || cass_uuid_from_string(room_id.c_str(), &room_uuid ) != CASS_OK) {
+            res.status = 400;
+            res.set_content(R"({"error": "Missing required fields"})", "application/json");
+            return;
+        }
+
+        json result = getAdminUsernames(database, room_uuid);
+
+        if (result.contains("error")) {
+            json error = {{ "error", result["error"] }};
+            res.status = result["code"];
+            res.set_content(error.dump(), "application/json");
+        }
+        else {
+            res.status = 200;
+            res.set_content(result.dump(), "application/json");
+        }
+    });
+
     svr.Get("/rooms/privilege/:room_id/", [&database](const httplib::Request& req, httplib::Response& res) {
         setCommonHeaders(res);
 
@@ -365,33 +417,131 @@ void defineRoomMethods(httplib::Server& svr, ChatRoomDB& database) {
         }
     });
 
-    /*
     // Remove admin
-    svr.Patch("/rooms/remove-admin", [&database](const httplib::Request& req, httplib::Response& res) {
-        setCommonHeaders(res);
-        removeAdmin(req, res, database);
-    });
-
-    // Make user admin
-    svr.Patch("/rooms/make-admin", [&database](const httplib::Request& req, httplib::Response& res) {
-        setCommonHeaders(res);
-        makeUserAdmin(req, res, database);
-    });
-    */
-
-    // Leave a chat room
-    svr.Patch("/rooms/leave-room", [&database](const httplib::Request& req, httplib::Response& res) {
+    svr.Patch("/rooms/demote-admin", [&database](const httplib::Request& req, httplib::Response& res) {
         setCommonHeaders(res);
 
         std::string auth_header = req.get_header_value("Authorization");
-
         std::optional<CassUuid> user_uuid_opt = getUserIdFromToken(auth_header);
         if (!user_uuid_opt.has_value()) {
             res.status = 401;
             res.set_content(R"({"error": "Not authorized"})", "application/json");
             return;
         }
+        CassUuid user_uuid = user_uuid_opt.value();
+        
+        const json body = json::parse(req.body);
 
+        if (!hasFields(body, { "room_id", "user_id" })) {
+            res.status = 400; 
+            res.set_content(R"({"error": "Missing required fields"})", "application/json");
+            return;
+        }
+
+        const std::string room_id = body["room_id"];
+        const std::string to_demote_user_id = body["user_id"];
+
+        CassUuid room_uuid;
+        CassUuid to_demote_user_uuid;
+
+        if (cass_uuid_from_string(room_id.c_str(), &room_uuid) != CASS_OK ||
+            cass_uuid_from_string(to_demote_user_id.c_str(), &to_demote_user_uuid) != CASS_OK) {
+            res.status = 400;
+            res.set_content(R"({"error": "Invalid parameter format"})", "application/json");
+            return;
+        }
+
+        if (!isOwner(database, room_uuid, user_uuid)) {
+            res.status = 401;
+            res.set_content(R"({"error": "Only owner can demote admins"})", "application/json");
+            return;
+        }
+        else if (isOwner(database, room_uuid, to_demote_user_uuid)) {
+            res.status = 401;
+            res.set_content(R"({"error": "Owner cannot be demoted"})", "application/json");
+            return;
+        }
+
+        json result = removeAdmin(database, room_uuid, to_demote_user_uuid);
+
+        if (result.contains("error")) {
+            json error = {{ "error", result["error"] }};
+            res.status = result["code"];
+            res.set_content(error.dump(), "application/json");
+        }
+        else {
+            res.status = 204;
+        }
+    });
+
+    // Make user admin
+    svr.Patch("/rooms/promote-user", [&database](const httplib::Request& req, httplib::Response& res) {
+        setCommonHeaders(res);
+
+        std::string auth_header = req.get_header_value("Authorization");
+        std::optional<CassUuid> user_uuid_opt = getUserIdFromToken(auth_header);
+        if (!user_uuid_opt.has_value()) {
+            res.status = 401;
+            res.set_content(R"({"error": "Not authorized"})", "application/json");
+            return;
+        }
+        CassUuid user_uuid = user_uuid_opt.value();
+
+        const json body = json::parse(req.body);
+
+        if (!hasFields(body, { "room_id", "user_id" })) {
+            res.status = 400; 
+            res.set_content(R"({"error": "Missing required fields"})", "application/json");
+            return;
+        }
+
+        const std::string room_id = body["room_id"];
+        const std::string to_promote_user_id = body["user_id"];
+
+        CassUuid room_uuid;
+        CassUuid to_promote_user_uuid;
+
+        if (cass_uuid_from_string(room_id.c_str(), &room_uuid) != CASS_OK ||
+            cass_uuid_from_string(to_promote_user_id.c_str(), &to_promote_user_uuid) != CASS_OK) {
+            res.status = 400;
+            res.set_content(R"({"error": "Invalid parameter format"})", "application/json");
+            return;
+        }
+
+        if (!isOwner(database, room_uuid, user_uuid)) {
+            res.status = 401;
+            res.set_content(R"({"error": "Not authorized"})", "application/json");
+            return;
+        }
+        else if (isAdmin(database, room_uuid, to_promote_user_uuid)) {
+            res.status = 400;
+            res.set_content(R"({"error": "User is already an admin"})", "application/json");
+            return;
+        }
+
+        json result = makeAdmin(database, room_uuid, to_promote_user_uuid);
+
+        if (result.contains("error")) {
+            json error = {{ "error", result["error"] }};
+            res.status = result["code"];
+            res.set_content(error.dump(), "application/json");
+        }
+        else {
+            res.status = 204;
+        }
+    });
+
+    // Leave a chat room
+    svr.Patch("/rooms/leave-room", [&database](const httplib::Request& req, httplib::Response& res) {
+        setCommonHeaders(res);
+
+        std::string auth_header = req.get_header_value("Authorization");
+        std::optional<CassUuid> user_uuid_opt = getUserIdFromToken(auth_header);
+        if (!user_uuid_opt.has_value()) {
+            res.status = 401;
+            res.set_content(R"({"error": "Not authorized"})", "application/json");
+            return;
+        }
         CassUuid user_uuid = user_uuid_opt.value();
 
         const json body = json::parse(req.body);
@@ -431,14 +581,12 @@ void defineRoomMethods(httplib::Server& svr, ChatRoomDB& database) {
         setCommonHeaders(res);
 
         std::string auth_header = req.get_header_value("Authorization");
-
         std::optional<CassUuid> user_uuid_opt = getUserIdFromToken(auth_header);
         if (!user_uuid_opt.has_value()) {
             res.status = 401;
             res.set_content(R"({"error": "Not authorized"})", "application/json");
             return;
         }
-
         CassUuid request_user_uuid = user_uuid_opt.value();
 
         const json body = json::parse(req.body);
@@ -487,14 +635,12 @@ void defineRoomMethods(httplib::Server& svr, ChatRoomDB& database) {
         setCommonHeaders(res);
 
         std::string auth_header = req.get_header_value("Authorization");
-
         std::optional<CassUuid> user_uuid_opt = getUserIdFromToken(auth_header);
         if (!user_uuid_opt.has_value()) {
             res.status = 401;
             res.set_content(R"({"error": "Not authorized"})", "application/json");
             return;
         }
-
         CassUuid user_uuid = user_uuid_opt.value();
 
         const json body = json::parse(req.body);
@@ -532,14 +678,12 @@ void defineRoomMethods(httplib::Server& svr, ChatRoomDB& database) {
         setCommonHeaders(res);
         
         std::string auth_header = req.get_header_value("Authorization");
-
         std::optional<CassUuid> user_uuid_opt = getUserIdFromToken(auth_header);
         if (!user_uuid_opt.has_value()) {
             res.status = 401;
             res.set_content(R"({"error": "Not authorized"})", "application/json");
             return;
         }
-
         CassUuid user_uuid = user_uuid_opt.value();
 
         const std::string room_id = req.path_params.at("room_id");
@@ -581,14 +725,12 @@ void defineRoomMethods(httplib::Server& svr, ChatRoomDB& database) {
         setCommonHeaders(res);
 
         std::string auth_header = req.get_header_value("Authorization");
-
         std::optional<CassUuid> user_uuid_opt = getUserIdFromToken(auth_header);
         if (!user_uuid_opt.has_value()) {
             res.status = 401;
             res.set_content(R"({"error": "Not authorized"})", "application/json");
             return;
         }
-
         CassUuid user_uuid = user_uuid_opt.value();
 
         const json body = json::parse(req.body);

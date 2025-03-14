@@ -1,7 +1,7 @@
 <template>
-    <div>
+    <div class="parent">
         <p>User Actions</p>
-        <button @click="leaveRoom()">Leave Room</button>
+        <button @click="router.push('/leave-room')">Leave Room</button>
     </div>
 </template>
 
@@ -12,41 +12,22 @@
     import { useUserStore } from '@/store/user'
     import axios from 'axios'
 
-
     const router = useRouter()
-    const apiStore = useApiStore()
-    const userStore = useUserStore()
-
-    const leaveRoom = async () => {
-        try {
-            // TODO: Confirm before leaving
-            const response = await axios.patch(`${apiStore.rest_url}/rooms/leave-room`, 
-               { room_id: userStore.current_room.room_id },
-               {
-                    headers: {
-                        Authorization: `Bearer ${localStorage.getItem('token')}`
-                    }
-               }
-            )
-
-            if (response.status == 204) {
-                userStore.current_room = null
-                router.push('/home')
-            }
-        }
-        catch (error) {
-            console.error('Failed to leave room: ', error)
-        }
-    }
 </script>
 
 
 <style scoped>
+.parent {
+    display: flex;
+    flex-direction: column;
+}
+
 button {
+    margin-top: 40px;
     font-size: 18pt;
     color: white;
-    min-width: 70px;
-    margin: auto;
+    min-width: 180px;
+    min-height: 50px;
     background-color: var(--foreground);
     border: var(--vue-green) solid 3px;
     text-align: center;

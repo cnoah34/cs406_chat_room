@@ -1,10 +1,8 @@
 <template>
     <div class="parent">
-        <router-link to="/home" class="back">Back</router-link>
+        <router-link to="/room-options" class="back">Back</router-link>
         <div class="container">
             <h1 style="color: var(--vue-green);">Remove a User</h1>
-
-            <!-- User list & select -->
             <div class="users-container" v-if="users.length > 0">
                 <ul>
                     <li v-for="(user, index) in users" :key="index" @click="selected_user = user"
@@ -13,13 +11,10 @@
                     </li>
                 </ul>
             </div>
-
             <div v-if="selected_user">
                 <p style="color: white; font-size: 14pt; padding: 10px;">Remove: {{ selected_user.username }}</p>
             </div>
-
             <button @click="removeUser()">Submit</button>
-
             <p v-if="result.message" :class="{'error': result.is_error, 
                      'success': !result.is_error}">{{ result.message }}</p>
         </div>
@@ -68,6 +63,7 @@
                     message: 'Successfully removed user', 
                     is_error: false,
                 }
+                getUsers()
             }
         }
         catch (error) {
@@ -86,18 +82,22 @@
         }
     }
 
-    onMounted( async () => {
+    const getUsers = async () => {
         try {
-            const response = 
-            await axios.get(`${apiStore.rest_url}/rooms/users/${userStore.current_room.room_id}`)
+                const response = 
+                await axios.get(`${apiStore.rest_url}/rooms/users/${userStore.current_room.room_id}`)
 
-            if (response.status == 200 && response.data.users_info) {
-                users.value = response.data.users_info
+                if (response.status == 200 && response.data.users_info) {
+                    users.value = response.data.users_info
+                }
             }
-        }
         catch (error) {
             result.value = { message: 'Failed to fetch users', is_error: true }
         }
+    }
+
+    onMounted( async () => {
+        getUsers()
     })
 </script>
 
@@ -198,18 +198,19 @@ li:hover {
     font-size: 18pt;
 }
 
-.submit {
-    width: 100%;
-    font-size: 18pt;
-    padding: 10px;
-    background-color: var(--vue-green);
-    border: none;
+button {
+    width: 80px;
+    height: 40px;
+    font-size: 16pt;
+    background-color: var(--foreground);
+    border: 3px solid var(--vue-green);
+    color: white;
     cursor: pointer;
     margin-top: 20px;
-    margin-bottom: 30px;
+    margin-bottom: 20px;
 }
 
-.submit:hover {
+button:hover {
     background-color: var(--vue-green);
 }
 

@@ -30,20 +30,6 @@ std::string createJwtToken(std::string user_id) {
     return token; 
 }
 
-std::string getUserIdFromUsername(ChatRoomDB& database, const std::string username) {
-    const char* query = "SELECT user_id FROM chat.users WHERE username = ?";
-    CassStatement* statement = cass_statement_new(query, 1);
-    cass_statement_bind_string(statement, 0, username.c_str());
-
-    const json result = database.SelectQuery(statement);
-
-    if (result.empty() || !result[0].contains("user_id")) {
-        return "";
-    }
-
-    return result[0]["user_id"];
-}
-
 int userExists(ChatRoomDB& database, const std::string& username) {
     const char* user_exists_query = "SELECT COUNT(*) FROM chat.users WHERE username = ?;"; 
     CassStatement* user_exists_statement = cass_statement_new(user_exists_query, 1);

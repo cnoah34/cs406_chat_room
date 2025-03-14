@@ -17,17 +17,11 @@
     const apiStore = useApiStore()
     const userStore = useUserStore()
 
-    const room_id = userStore.current_room.room_id
-
     const leaveRoom = async () => {
         try {
-
             // TODO: Confirm before leaving
             const response = await axios.patch(`${apiStore.rest_url}/rooms/leave-room`, 
-               {
-                    room_id: room_id.value,
-                    user_id: userStore.user_id,
-               },
+               { room_id: userStore.current_room.room_id },
                {
                     headers: {
                         Authorization: `Bearer ${localStorage.getItem('token')}`

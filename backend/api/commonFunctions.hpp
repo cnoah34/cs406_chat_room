@@ -191,6 +191,33 @@ bool isInRoom(ChatRoomDB& database, const CassUuid& room_uuid, const CassUuid& u
     return false;
 }
 
+std::string getUserIdFromUsername(ChatRoomDB& database, const std::string username) {
+    const char* query = "SELECT user_id FROM chat.users WHERE username = ?";
+    CassStatement* statement = cass_statement_new(query, 1);
+    cass_statement_bind_string(statement, 0, username.c_str());
+
+    const json result = database.SelectQuery(statement);
+
+    if (result.empty() || !result[0].contains("user_id")) {
+        return "";
+    }
+
+    return result[0]["user_id"];
+}
+
+std::string getUsernameFromUserId(ChatRoomDB& database, const CassUuid& user_uuid) {
+    const char* query = "SELECT username FROM chat.users WHERE user_id = ?";
+    CassStatement* statement = cass_statement_new(query, 1);
+    cass_statement_bind_uuid(statement, 0, user_uuid);
+
+    const json result = database.SelectQuery(statement);
+
+    if (result.empty() || !result[0].contains("username")) {
+        return "";
+    }
+
+    return result[0]["username"];
+}
 
 #endif
 

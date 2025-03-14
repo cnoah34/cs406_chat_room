@@ -22,6 +22,41 @@ json getRoomDetails(ChatRoomDB& database, const CassUuid& room_uuid) {
     return result[0];
 }
 
+json getUsernames(ChatRoomDB& database, const CassUuid& room_uuid) {
+    const char* query = "SELECT user_ids FROM chat.rooms WHERE room_id = ?";
+    CassStatement* statement = cass_statement_new(query, 1); 
+    cass_statement_bind_uuid(statement, 0, room_uuid);
+
+    const json result = database.SelectQuery(statement);
+
+    json users_info;
+
+    if (!result[0].contains("user_ids")) {
+        return { 
+            { "error", "Could not fetch user IDs" }, 
+            { "code", 404 } 
+        };
+    }
+
+    for (std::string user_id : result[0]["user_ids"]) {
+        CassUuid user_uuid;
+
+        if (cass_uuid_from_string(user_id.c_str(), &user_uuid) != CASS_OK) {
+            break;
+        }
+
+        std::string username = getUsernameFromUserId(database, user_uuid);
+
+        if (username == "") {
+            break;
+        }
+
+        users_info["users_info"].push_back({{ "user_id", user_id }, { "username", username }});
+    }
+
+    return users_info;
+}
+
 json getPrivilegeLevel(ChatRoomDB& database, const CassUuid& room_uuid, const CassUuid& user_uuid) {
     if (isOwner(database, room_uuid, user_uuid)) {
         return {{ "level", "Owner" }};
@@ -269,6 +304,31 @@ void defineRoomMethods(httplib::Server& svr, ChatRoomDB& database) {
         }
     });
 
+    svr.Get("/rooms/users/:room_id/", [&database](const httplib::Request& req, httplib::Response& res) {
+        setCommonHeaders(res);
+
+        const std::string room_id = req.path_params.at("room_id");
+        CassUuid room_uuid;
+
+        if (room_id.empty() || cass_uuid_from_string(room_id.c_str(), &room_uuid ) != CASS_OK) {
+            res.status = 400;
+            res.set_content(R"({"error": "Missing required fields"})", "application/json");
+            return;
+        }
+
+        json result = getUsernames(database, room_uuid);
+
+        if (result.contains("error")) {
+            json error = {{ "error", result["error"] }};
+            res.status = result["code"];
+            res.set_content(error.dump(), "application/json");
+        }
+        else {
+            res.status = 200;
+            res.set_content(result.dump(), "application/json");
+        }
+    });
+
     svr.Get("/rooms/privilege/:room_id/", [&database](const httplib::Request& req, httplib::Response& res) {
         setCommonHeaders(res);
 
@@ -337,6 +397,7 @@ void defineRoomMethods(httplib::Server& svr, ChatRoomDB& database) {
         const json body = json::parse(req.body);
 
         if (!hasFields(body, { "room_id" })) {
+            std::cout << "No room_id" << std::endl;
             res.status = 400; 
             res.set_content(R"({"error": "Missing required fields"})", "application/json");
             return;
@@ -347,6 +408,7 @@ void defineRoomMethods(httplib::Server& svr, ChatRoomDB& database) {
         CassUuid room_uuid;
 
         if (cass_uuid_from_string(room_id.c_str(), &room_uuid) != CASS_OK) {
+            std::cout << "Bad format" << std::endl;
             res.status = 400;
             res.set_content(R"({"error": "Invalid parameter format"})", "application/json");
             return;
@@ -365,7 +427,7 @@ void defineRoomMethods(httplib::Server& svr, ChatRoomDB& database) {
     });
 
     // Remove a user from a chat room (privilege cannot exceed or match user making request) 
-    svr.Patch("/rooms/remove_user", [&database](const httplib::Request& req, httplib::Response& res) {
+    svr.Patch("/rooms/remove-user", [&database](const httplib::Request& req, httplib::Response& res) {
         setCommonHeaders(res);
 
         std::string auth_header = req.get_header_value("Authorization");

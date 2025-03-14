@@ -5,6 +5,7 @@ import HomeView from '../views/HomeView.vue'
 import CreateRoomView from '../views/CreateRoomView.vue'
 import JoinRoomView from '../views/JoinRoomView.vue'
 import RoomOptionsView from '../views/RoomOptionsView.vue'
+import RemoveUserView from '@/views/RemoveUserView.vue'
 
 const routes = [
     { path: '/', component: WelcomeView },
@@ -12,6 +13,7 @@ const routes = [
     { path: '/create-room', component: CreateRoomView, meta: { requiresAuth: true } },
     { path: '/join-room', component: JoinRoomView, meta: { requiresAuth: true } },
     { path: '/room-options', component: RoomOptionsView, meta: { requiresAuth: true } },
+    { path: '/remove-user', component: RemoveUserView, meta: { requiresAuth: true } },
 ]
 
 const router = createRouter ({

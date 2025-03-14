@@ -50,7 +50,6 @@
         result.value = { message: '', is_error: false }
 
         try {
-            console.log(selected_user.value.user_id)
             const response = await axios.patch(
             `${apiStore.rest_url}/rooms/remove-user`, 
                 { 

@@ -23,7 +23,7 @@ export const useWebSocketStore = defineStore('websocket', {
             this.socket = new WebSocket(`wss://localhost:8081/wss`)
             
             this.socket.onopen = () => {
-                console.log('Connected to websocket server')
+                //console.log('Connected to websocket server')
 
                 const room_data = { room_id: roomId }
                 this.socket.send(JSON.stringify(room_data))
@@ -42,7 +42,7 @@ export const useWebSocketStore = defineStore('websocket', {
             }
 
             this.socket.onclose = () => {
-                console.log('Websocket connection closed')
+                //console.log('Websocket connection closed')
                 this.is_connected = false
             }
         },

@@ -160,6 +160,8 @@ json dynamicRead(CassFuture* future) {
 
 class ChatRoomDB {
     public:
+        bool connected = false;
+
         ChatRoomDB(const char* ip);
         ~ChatRoomDB();
         json SelectQuery(CassStatement* statement);
@@ -184,6 +186,7 @@ ChatRoomDB::ChatRoomDB(const char* ip) : connect_future(nullptr) {
 
     // `cass_future_error_code` will block until connected or refused.
     if (cass_future_error_code(connect_future) == CASS_OK) {
+        connected = true;
         std::cout << "Connected" << std::endl;
     }
     else {

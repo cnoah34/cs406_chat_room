@@ -40,13 +40,18 @@ int main() {
     }
 
     ChatRoomDB database(database_ip);
+    if (!database.connected) {
+        return 1;
+    }
+
     WebSocketManager ws_manager;
 
     std::thread rest_server_thread([&database, &ws_manager, &rest_port]() {
-        httplib::SSLServer svr("./cert.pem", "./key.pem");
+        httplib::SSLServer svr("misc/cert.pem", "misc/key.pem");
 
         if (!svr.is_valid()) {
-            std::cout << "Fail" << std::endl;
+            std::cout << "Failed to start HTTPS server, initialization failed validation" << std::endl;
+            return;
         }
 
         svr.Options(R"(/.*)", [](const httplib::Request&, httplib::Response& res) {
@@ -65,8 +70,8 @@ int main() {
 
     std::thread websocket_server_thread([&ws_manager, websocket_port]() {
         uWS::SSLApp ssl_app({
-            .key_file_name = "./key.pem",
-            .cert_file_name = "./cert.pem"
+            .key_file_name = "misc/key.pem",
+            .cert_file_name = "misc/cert.pem"
         });
 
         uWS::TemplatedApp<true>::WebSocketBehavior<UserData> ws_behavior;

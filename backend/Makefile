@@ -14,7 +14,7 @@ INCLUDE=-I./include \
 	-isystem$(VCPKG_INCLUDE)
 
 # ScyllaDB linking
-SCYLLA_LIB=./include/cpp-driver/build/libscylla-cpp-driver.so -Wl,-rpath,./include/cpp-driver/build/ 
+SCYLLA_LIB=./include/cpp-driver/build/libscylla-cpp-driver.so -Wl,-rpath,./include/cpp-driver/build/
 
 # Linking these
 LIBS=-lbcrypt -lz -lssl -lcrypto -ldl ./include/uSockets/*.o

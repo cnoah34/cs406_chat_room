@@ -1,7 +1,7 @@
 #ifndef CHATUSER_HPP_INCLUDED
 #define CHATUSER_HPP_INCLUDED
 
-#include <libbcrypt/include/bcrypt/BCrypt.hpp>
+#include <bcrypt/BCrypt.hpp>
 
 #include <commonFunctions.hpp>
 

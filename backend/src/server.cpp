@@ -4,6 +4,7 @@
 #include <string>
 #include <thread>
 
+#include <openssl/err.h>
 #include <nlohmann/json.hpp>
 #include <cpp-httplib/httplib.h>
 #include <uwebsockets/App.h>
@@ -33,6 +34,24 @@ int main() {
     }
     int websocket_port = std::stoi(websocket_port_str);
 
+    const char* cert_path = std::getenv("SSL_CERT_PATH");
+    if (cert_path == nullptr) {
+        std::cerr << "SSL_CERT_PATH environment variable not set" << std::endl;
+        return 1;
+    }
+
+    const char* key_path = std::getenv("SSL_KEY_PATH");
+    if (key_path == nullptr) {
+        std::cerr << "SSL_CERT_PATH environment variable not set" << std::endl;
+        return 1;
+    }
+
+    const char* key_password = std::getenv("SSL_KEY_PASSWORD");
+    if (key_password == nullptr) {
+        std::cerr << "SSL_KEY_PASSWORD environment variable not set" << std::endl;
+        return 1;
+    }
+
     const char* database_ip = std::getenv("DATABASE_IP");
     if (database_ip == nullptr) {
         std::cerr << "DATABASE_IP environment variable not set" << std::endl;
@@ -46,11 +65,12 @@ int main() {
 
     WebSocketManager ws_manager;
 
-    std::thread rest_server_thread([&database, &ws_manager, &rest_port]() {
-        httplib::SSLServer svr("misc/cert.pem", "misc/key.pem");
+    std::thread rest_server_thread([&database, &ws_manager, &rest_port, &cert_path, &key_path, &key_password]() {
+        httplib::SSLServer svr(cert_path, key_path, nullptr, nullptr, key_password);
 
         if (!svr.is_valid()) {
             std::cout << "Failed to start HTTPS server, initialization failed validation" << std::endl;
+            ERR_print_errors_fp(stderr);
             return;
         }
 
@@ -68,10 +88,11 @@ int main() {
         svr.listen("0.0.0.0", rest_port);
     });
 
-    std::thread websocket_server_thread([&ws_manager, websocket_port]() {
+    std::thread websocket_server_thread([&ws_manager, &websocket_port, &cert_path, &key_path, &key_password]() {
         uWS::SSLApp ssl_app({
-            .key_file_name = "misc/key.pem",
-            .cert_file_name = "misc/cert.pem"
+            .key_file_name = key_path,
+            .cert_file_name = cert_path,
+            .passphrase = key_password
         });
 
         uWS::TemplatedApp<true>::WebSocketBehavior<UserData> ws_behavior;
@@ -118,6 +139,7 @@ int main() {
             }
             else {
                 std::cerr << "Failed to start websocket server on port: " << websocket_port << std::endl;
+                ERR_print_errors_fp(stderr);
             }
         });
 

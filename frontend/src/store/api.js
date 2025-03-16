@@ -23,6 +23,8 @@ export const useWebSocketStore = defineStore('websocket', {
             const websocket_url = import.meta.env.VITE_WEBSOCKET_URL
                                 || 'wss://localhost:8081/wss'
 
+            console.log(websocket_url)
+
             this.socket = new WebSocket(websocket_url)
             
             this.socket.onopen = () => {

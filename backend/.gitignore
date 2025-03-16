@@ -1,4 +1,5 @@
 *.out
 *.sh
 *.pem
+*.env
 server.o

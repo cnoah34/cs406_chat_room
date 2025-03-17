@@ -155,15 +155,14 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    height: 50vh;
-    width: 25vw;
+    width: 30%;
     padding: 20px;
     border: 3px solid var(--vue-green);
     background-color: var(--foreground);
 }
 
 .form-container {
-    width: 80%;
+    width: 90%;
 }
 
 .form-data {
@@ -172,14 +171,14 @@
 }
 
 .form-data label {
-    font-size: 14pt;
+    font-size: 1.25em;
     text-align: left;
     margin-top: 10px;
 }
 
 .form-data input {
     height: 40px;
-    font-size: 14pt;
+    font-size: 1.25em;
     justify-content: center;
     align-items: center;
 }

@@ -1,7 +1,7 @@
 <template>
-    <div class="parent">
-        <nav>
-            <router-link to="/home" class="back">Back</router-link>
+    <div style="display: flex; flex-direction: column;">
+        <nav style="display: flex; flex-direction: row-reverse;">
+            <button @click="router.push('/home')" class="back button-gray">Back</button>
         </nav>
         <div class="options-parent">
             <div class="info">
@@ -64,35 +64,10 @@
 
 
 <style scoped>
-.parent {
-    display: flex;
-    flex-direction: column;
-}
-
-nav {
-    display: flex;
-    flex-direction: row-reverse;
-    max-height: 40px;
-}
-
 .back {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 80px;
-    height: 40px;
-    font-size: 16pt;
-    background-color: var(--foreground);
-    border: 3px solid var(--vue-green);
+    font-size: 1.5rem;
+    width: 6rem;
     border-bottom: none;
-    color: white;
-    cursor: pointer;
-    text-decoration: none;
-}
-
-.back:hover {
-    background-color: var(--vue-green);
-    color: var(--foreground);
 }
 
 .options-parent {
@@ -108,7 +83,7 @@ nav {
     flex-direction: row;
     border-bottom: 3px solid var(--vue-green);
     color: white;
-    font-size: 16pt;
+    font-size: 1.25rem;
     padding: 10px;
     gap: 20px;
     justify-content: space-evenly;

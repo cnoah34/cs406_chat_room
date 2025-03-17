@@ -1,9 +1,9 @@
 <template>
-    <div class="parent">
-        <nav>
-            <button v-if="isAuthenticated" @click="handleLogout" class="logout">Logout</button>
-            <router-link to="/room-options" v-if="userStore.current_room" class="room-options">
-                Room Options</router-link>
+    <div style="display: flex; flex-direction: column;">
+        <nav style="display: flex; flex-direction: row-reverse;">
+            <button v-if="isAuthenticated" @click="handleLogout" class="button-gray logout">Logout</button>
+            <button v-if="userStore.current_room"
+                    @click="router.push('room-options')" class="button-gray room-options">Room Options</button>
         </nav>
         <div class="home">
             <Rooms class="left" />
@@ -30,53 +30,18 @@
 
 
 <style scoped>
-.parent {
-    display: flex;
-    flex-direction: column;
-}
-
-nav {
-    display: flex;
-    flex-direction: row-reverse;
-    max-height: 40px;
-}
-
 .logout {
-    width: 80px;
-    height: 40px;
-    font-size: 16pt;
-    background-color: var(--foreground);
-    border: 3px solid var(--vue-green);
+    font-size: 1.5rem;
+    width: 7rem;
     border-bottom: none;
-    color: white;
-    cursor: pointer;
-}
-
-.logout:hover {
-    background-color: var(--vue-green);
-    color: var(--foreground);
-}
+ }
 
 .room-options {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 140px;
-    height: 40px;
-    font-size: 14pt;
-    background-color: var(--foreground);
-    border: 3px solid var(--vue-green);
-    border-right: none;
+    font-size: 1.5rem;
+    width: 11rem;
     border-bottom: none;
-    color: white;
-    cursor: pointer;
-    text-decoration: none;
-}
-
-.room-options:hover {
-    background-color: var(--vue-green);
-    color: var(--foreground);
-}
+    border-right: none;
+ }
 
 .home {
     background-color: var(--vt-c-black);

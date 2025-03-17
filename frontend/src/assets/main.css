@@ -11,3 +11,32 @@
     --vue-green: hsla(160, 100%, 37%, 1);
     --foreground: #282828;
 }
+
+.error {
+    color: red;
+    font: bold;
+}
+
+.success {
+    color: var(--vue-green);
+    font: bold;
+}
+
+.button-gray {
+    background-color: var(--foreground);
+    border: 3px solid var(--vue-green);
+    color: white;
+    cursor: pointer;
+}
+
+.button-gray:hover {
+    background-color: var(--vue-green);
+    color: var(--foreground);
+}
+
+.button-green {
+    background-color: var(--vue-green);
+    border: 3px solid var(--foreground);
+    cursor: pointer;
+}
+

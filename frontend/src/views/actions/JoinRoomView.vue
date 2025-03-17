@@ -1,6 +1,6 @@
 <template>
     <div class="parent">
-        <router-link to="/home" class="back">Back</router-link>
+        <button @click="router.push('/home')" class="button-gray back">Back</button>
         <div class="container">
             <h1 style="color: var(--vue-green);">Join a Room</h1>
             <form @submit.prevent="handleSubmit" autocomplete="off">
@@ -8,7 +8,7 @@
                 <input type="text" id="room_id" v-model="room_id"
                                                   placeholder="Enter the room ID" />
 
-                <button type="submit" class="submit">Submit</button>
+                <button type="submit" class="button-green submit">Submit</button>
             </form>
             <p v-if="result.message" :class="{'error': result.is_error, 
                      'success': !result.is_error}">{{ result.message }}</p>
@@ -20,9 +20,10 @@
 <script setup>
     import { ref } from 'vue'
     import axios from 'axios'
-    import { RouterLink } from 'vue-router'
+    import { useRouter } from 'vue-router'
     import { useApiStore } from '@/store/api'
 
+    const router = useRouter()
     const apiStore = useApiStore()
     
     const room_id = ref('')
@@ -81,23 +82,9 @@
 }
 
 .back {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 80px;
-    height: 40px;
-    font-size: 14pt;
-    background-color: var(--foreground);
-    border: 3px solid var(--vue-green);
+    font-size: 1.5rem;
+    width: 6rem;
     border-bottom: none;
-    color: white;
-    cursor: pointer;
-    text-decoration: none;
-}
-
-.back:hover {
-    background-color: var(--vue-green);
-    color: var(--foreground);
 }
 
 .container {
@@ -138,27 +125,10 @@ form input:focus {
 
 .submit {
     width: 100%;
+    height: 6vh;
     font-size: 18pt;
-    padding: 10px;
-    background-color: var(--vue-green);
-    border: none;
-    cursor: pointer;
     margin-top: 20px;
     margin-bottom: 30px;
-}
-
-.submit:hover {
-    background-color: var(--vue-green);
-}
-
-.error {
-    color: red;
-    font: bold;
-}
-
-.success {
-    color: var(--vue-green);
-    font: bold;
 }
 
 </style>

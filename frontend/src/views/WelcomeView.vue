@@ -2,6 +2,7 @@
     <div class="container">
         <h1 class='welcome'>Welcome</h1>
         <Login />
+        <img src="../assets/positivessl_trust_seal_md_167x42.png" style="margin-top: 40px;">
     </div>
 </template>
 
@@ -30,17 +31,18 @@
 
 
 <style scoped>
-    .container {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        text-align: center;
-    }
+.container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
 
-    .welcome {
-        font-size: 40pt;
-        margin-top: 40px;
-        margin-bottom: 80px;
-    }
+.welcome {
+    font-size: 40pt;
+    margin-top: 15px;
+    margin-bottom: 40px;
+}
+
 </style>

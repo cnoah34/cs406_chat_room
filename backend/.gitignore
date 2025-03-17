@@ -3,6 +3,6 @@
 *.pem
 *.key
 *.crt
-*.env
 misc/*
 server.o
+.env*

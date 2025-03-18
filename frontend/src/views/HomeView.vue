@@ -52,7 +52,7 @@
 
 .home .left {
     height: 100%;
-    min-width: 300px;
+    width: 300px;
     border: 3px solid var(--vue-green);
 }
 

@@ -153,6 +153,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
+    text-align: center;
     width: 30%;
     min-width: 320px;
     padding: 20px;

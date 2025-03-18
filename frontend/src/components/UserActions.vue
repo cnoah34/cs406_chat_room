@@ -1,6 +1,5 @@
 <template>
     <div style="display: flex; flex-direction: column;">
-        <p>User Actions</p>
         <button @click="router.push('/leave-room')" class="button-gray action">Leave Room</button>
     </div>
 </template>

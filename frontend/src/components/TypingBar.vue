@@ -21,11 +21,16 @@
 
     const lineBreak = (event) => {
         event.preventDefault();
+
+        if (!content.value) {
+            content.value = ''
+        }
+
         content.value += '\n'
     }
 
     const sendMessage = async () => {
-        if (content.value.trim()) {
+        if (content.value) {
             try {
                 const response = await axios.post(
                     `${import.meta.env.VITE_REST_URL}/messages`,

@@ -1,7 +1,7 @@
 <template>
-    <div class='auth'>
+    <div class='parent'>
         <h1 style='color: var(--vue-green);'>{{ isLogin ? 'Login' : 'Sign Up' }}</h1>
-        <div class='form-container'>
+        <div style="width: 90%;">
             <form @submit.prevent='handleSubmit'>
                 <div class='form-data'>
                     <label for='username'>Username</label>
@@ -149,34 +149,32 @@
 
 
 <style scoped>
-.auth {
+.parent {
     display: flex;
     flex-direction: column;
     align-items: center;
     width: 30%;
+    min-width: 320px;
     padding: 20px;
     border: 3px solid var(--vue-green);
     background-color: var(--foreground);
 }
 
-.form-container {
-    width: 90%;
-}
-
 .form-data {
     display: flex;
     flex-direction: column;
+    position: relative;
 }
 
 .form-data label {
-    font-size: 1.25em;
+    font-size: 1.5em;
     text-align: left;
     margin-top: 10px;
 }
 
 .form-data input {
-    height: 40px;
     font-size: 1.25em;
+    min-height: 40px;
     justify-content: center;
     align-items: center;
 }
@@ -206,8 +204,8 @@
 
 .password-requirements {
     position: absolute;
-    top: 50%;
-    left: 65%;
+    top: 70%;
+    left: 120%;
     padding: 10px;
     border: 1px solid #ddd;
     background-color: var(--foreground);

@@ -23,12 +23,10 @@
     import { ref, onMounted } from 'vue'
     import { RouterLink, RouterView, useRouter } from 'vue-router'
     import { fetchUserData } from '@/auth'
-    import { useWebSocketStore } from '@/store/api'
     import { useUserStore } from '@/store/user'
     import axios from 'axios'
 
     const router = useRouter()
-    const webSocketStore = useWebSocketStore()
     const userStore = useUserStore()
 
     const rooms = ref([])

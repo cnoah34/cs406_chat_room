@@ -7,8 +7,10 @@
             </p>
 
             <ul>
-                <li v-for="message in messages" :key="message.created_at">
-                    <strong style="font-weight: bold;">{{ message.username }}</strong>: {{ message.content }}
+                <li v-for="message in messages" :key="message.created_at" 
+                           style="list-style-type:none; margin-top: 15px;">
+                    <strong class="username">{{ message.username }}<br></strong>
+                    <span v-html="formatMessage(message.content)" class="message"></span>
                 </li>
             </ul>
         </div>
@@ -33,6 +35,10 @@
     const has_more_messages = ref(true)
 
     const socket = ref(null)
+
+    const formatMessage = (message) => {
+        return message.replace(/\n/g, '<br>')
+    }
 
     const getOldMessages = async (before = null) => {
         try {
@@ -161,12 +167,15 @@
     height: 90%;
 }
 
-li {
+.username {
+    font-size: 16pt;
+    font-weight: bold;
+    color: var(--vue-green);
+}
+
+.message {
     font-size: 14pt;
-    list-style-type: none;
     color: white;
-    margin-top: 10px;
-    padding-right: 20px;
     word-break: break-word;
 }
 

@@ -1,8 +1,11 @@
 <template>
     <div>
         <form @submit.prevent="sendMessage" autocomplete="off" class="bar">
-            <input type="text" id="content" v-model="content"
-                   placeholder="Type a message..." />
+            <textarea id="content" v-model="content"
+                                   placeholder="Type a message..."
+                                   @keydown.enter.exact.prevent="sendMessage"
+                                   @keydown.enter.shift.exact="lineBreak">
+            </textarea>
             <button type="submit" class="button-gray submit">Send</button>
         </form>
     </div>
@@ -14,11 +17,15 @@
     import axios from 'axios'
 
     const userStore = useUserStore()
-    const content = ref(null)
+    const content = ref('')
 
-    // Make async
+    const lineBreak = (event) => {
+        event.preventDefault();
+        content.value += '\n'
+    }
+
     const sendMessage = async () => {
-        if (content.value) {
+        if (content.value.trim()) {
             try {
                 const response = await axios.post(
                     `${import.meta.env.VITE_REST_URL}/messages`,
@@ -50,17 +57,18 @@
     height: 3em;
 }
 
-input {
-    font-size: 14pt;
+textarea {
+    font-family: inherit;
+    font-size: 1.25rem;
     flex-grow: 1;
-    justify-content: stretch;
-    padding-left: 30px;
+    padding: 10px;
     color: white;
     background-color: var(--foreground);
     border: none;
+    resize: none;
 }
 
-input:focus {
+textarea:focus {
     outline: none;
 }
 

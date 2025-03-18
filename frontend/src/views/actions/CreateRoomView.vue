@@ -21,10 +21,8 @@
     import { ref } from 'vue'
     import axios from 'axios'
     import { useRouter } from 'vue-router'
-    import { useApiStore } from '@/store/api'
 
     const router = useRouter()
-    const apiStore = useApiStore()
     
     const room_name = ref('')
     const result = ref({
@@ -42,7 +40,7 @@
         result.value = { message: '', is_error: false }
 
         try {
-            const response = await axios.post(`${apiStore.rest_url}/rooms`, 
+            const response = await axios.post(`${import.meta.env.VITE_REST_URL}/rooms`, 
                 { name: room_name.value },
                 {
                     headers: { 

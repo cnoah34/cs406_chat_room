@@ -23,12 +23,11 @@
     import { ref, onMounted } from 'vue'
     import { RouterLink, RouterView, useRouter } from 'vue-router'
     import { fetchUserData } from '@/auth'
-    import { useApiStore, useWebSocketStore } from '@/store/api'
+    import { useWebSocketStore } from '@/store/api'
     import { useUserStore } from '@/store/user'
     import axios from 'axios'
 
     const router = useRouter()
-    const apiStore = useApiStore()
     const webSocketStore = useWebSocketStore()
     const userStore = useUserStore()
 
@@ -37,7 +36,7 @@
 
     const getRoom = async (room_id) => {
         try {
-            const response = await axios.get(`${apiStore.rest_url}/rooms/${room_id}`, {
+            const response = await axios.get(`${import.meta.env.VITE_REST_URL}/rooms/${room_id}`, {
                 headers: {
                     Authorization: `Bearer ${localStorage.getItem('token')}`
                 }

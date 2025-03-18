@@ -7,9 +7,7 @@
 
 
 <script setup>
-    import { RouterLink, RouterView, useRouter } from 'vue-router'
-    import { useApiStore } from '@/store/api'
-
+    import { useRouter } from 'vue-router'
     const router = useRouter()
 </script>
 

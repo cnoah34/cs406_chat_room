@@ -25,7 +25,6 @@
     import { ref, onMounted } from 'vue'
     import { RouterLink, RouterView, useRouter } from 'vue-router'
     import { isAuthenticated, fetchUserData } from '@/auth'
-    import { useApiStore } from '@/store/api'
     import { useUserStore } from '@/store/user'
     import axios from 'axios'
 
@@ -34,7 +33,6 @@
     import UserActions from '@/components/UserActions.vue'
 
     const router = useRouter()
-    const apiStore = useApiStore()
     const userStore = useUserStore()
 
     const room = userStore.current_room
@@ -45,7 +43,7 @@
         //Get privilege level
         try {
             const response = 
-            await axios.get(`${apiStore.rest_url}/rooms/privilege/${userStore.current_room.room_id}`, {
+            await axios.get(`${import.meta.env.VITE_REST_URL}/rooms/privilege/${userStore.current_room.room_id}`, {
                 headers: {
                     Authorization: `Bearer ${localStorage.getItem('token')}`
                 }

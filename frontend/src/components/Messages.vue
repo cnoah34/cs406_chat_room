@@ -19,13 +19,12 @@
 
 <script setup>
     import { ref, onMounted, watch } from 'vue'
-    import { useApiStore, useWebSocketStore } from '@/store/api'
+    import { useWebSocketStore } from '@/store/api'
     import { useUserStore } from '@/store/user'
     import TypingBar from './TypingBar.vue'
     import axios from 'axios'
 
     const userStore = useUserStore()
-    const apiStore = useApiStore()
     const webSocketStore = useWebSocketStore()
 
     const messages = ref([])
@@ -46,8 +45,8 @@
             const limit = 20
 
             const url = before
-            ? `${apiStore.rest_url}/messages/${userStore.current_room.room_id}?limit=${limit}&before=${before}`
-            : `${apiStore.rest_url}/messages/${userStore.current_room.room_id}?limit=${limit}`
+            ? `${import.meta.env.VITE_REST_URL}/messages/${userStore.current_room.room_id}?limit=${limit}&before=${before}`
+            : `${import.meta.env.VITE_REST_URL}/messages/${userStore.current_room.room_id}?limit=${limit}`
 
             const response = await axios.get(url, {
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }

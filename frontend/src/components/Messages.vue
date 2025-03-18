@@ -102,6 +102,7 @@
                 has_more_messages.value = true
                 getOldMessages()
 
+                // Connect to the current room
                 webSocketStore.connectWebSocket(userStore.current_room.room_id)
             }
         },

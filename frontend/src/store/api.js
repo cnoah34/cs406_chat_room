@@ -19,10 +19,18 @@ export const useWebSocketStore = defineStore('websocket', {
             
             this.socket.onopen = () => {
                 //console.log('Connected to websocket server')
+                try {
+                    const body = {
+                        room_id: roomId,
+                        Authorization: `Bearer ${localStorage.getItem('token')}`,
+                    }
 
-                const room_data = { room_id: roomId }
-                this.socket.send(JSON.stringify(room_data))
-                this.is_connected = true
+                    this.socket.send(JSON.stringify(body))
+                    this.is_connected = true
+                }
+                catch (error) {
+                    console.error('Error opening websocket connection: ', error)
+                }
             }
 
             this.socket.onmessage = (event) => {

@@ -15,11 +15,9 @@
     import { ref } from 'vue'
     import axios from 'axios'
     import { RouterLink, RouterView, useRouter } from 'vue-router'
-    import { useApiStore } from '@/store/api'
     import { useUserStore } from '@/store/user'
 
     const router = useRouter()
-    const apiStore = useApiStore()
     const userStore = useUserStore()
 
     const result = ref({
@@ -32,7 +30,7 @@
 
         try {
             const response = await axios.delete(
-            `${apiStore.rest_url}/rooms/${userStore.current_room.room_id}`, 
+            `${import.meta.env.VITE_REST_URL}/rooms/${userStore.current_room.room_id}`, 
                 {
                     headers: {
                         Authorization: `Bearer ${localStorage.getItem('token')}`

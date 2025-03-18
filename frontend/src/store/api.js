@@ -1,12 +1,5 @@
 import { defineStore } from 'pinia'
 
-export const useApiStore = defineStore('api', {
-    state: () => ({
-        rest_url: import.meta.env.VITE_REST_URL || 'https://localhost:8080'
-    }),
-    persist: true,
-})
-
 export const useWebSocketStore = defineStore('websocket', {
     state: () => ({
         socket: null,
@@ -21,7 +14,6 @@ export const useWebSocketStore = defineStore('websocket', {
             }
 
             const websocket_url = import.meta.env.VITE_WEBSOCKET_URL
-                                || 'wss://localhost:8081/wss'
 
             this.socket = new WebSocket(websocket_url)
             

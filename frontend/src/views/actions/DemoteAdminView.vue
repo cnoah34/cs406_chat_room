@@ -26,10 +26,8 @@
     import { ref, onMounted } from 'vue'
     import axios from 'axios'
     import { RouterLink } from 'vue-router'
-    import { useApiStore } from '@/store/api'
     import { useUserStore } from '@/store/user'
 
-    const apiStore = useApiStore()
     const userStore = useUserStore()
 
     const admins = ref([])
@@ -46,7 +44,7 @@
 
         try {
             const response = await axios.patch(
-            `${apiStore.rest_url}/rooms/demote-admin`, 
+            `${import.meta.env.VITE_REST_URL}/rooms/demote-admin`, 
                 { 
                     room_id: userStore.current_room.room_id,
                     user_id: selected_admin.value.user_id,

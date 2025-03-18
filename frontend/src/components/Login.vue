@@ -1,22 +1,22 @@
 <template>
-    <div class='auth'>
+    <div class='parent'>
         <h1 style='color: var(--vue-green);'>{{ isLogin ? 'Login' : 'Sign Up' }}</h1>
-        <div class='form-container'>
+        <div style="width: 90%;">
             <form @submit.prevent='handleSubmit'>
                 <div class='form-data'>
                     <label for='username'>Username</label>
-                    <input type='text' id='username' v-model='formData.username'
+                    <input type='text' id='username' v-model='form_data.username'
                            placeholder='Enter your username' />
 
                     <label for='password'>Password</label>
-                    <input type='password' id='password' v-model='formData.password'
-                           placeholder='Enter your password' @input='checkRequirements' @focus='showPasswordRequirements = !isLogin'
+                    <input type='password' id='password' v-model='form_data.password'
+                           placeholder='Enter your password' @input='checkRequirements' @focus='show_password_requirements = !isLogin'
                         @blur='hideChecker'/>
 
-                    <div v-if='showPasswordRequirements && !isLogin' class='password-requirements'>
+                    <div v-if='show_password_requirements && !isLogin' class='password-requirements'>
                         <p>Password must contain:</p>
                         <ul>
-                            <li v-for='(item, index) in passwordRequirements' :key='index'
+                            <li v-for='(item, index) in password_requirements' :key='index'
                                 :class="{'error': !item.isValid, 'success': item.isValid}">
                                 {{ item.text }}
                             </li>
@@ -25,7 +25,7 @@
                 </div>
 
 
-                <button type='submit'>{{ isLogin ? 'Login' : 'Sign Up' }}</button>
+                <button type='submit' class='button-green submit'>{{ isLogin ? 'Login' : 'Sign Up' }}</button>
             </form>
 
 
@@ -44,76 +44,74 @@
     import axios from 'axios'
     import { useRouter } from 'vue-router'
     import { login } from '@/auth'
-    import { useApiStore } from '@/store/api'
     
     const router = useRouter()
-    const apiStore = useApiStore()
 
     const isLogin = ref(true)
-    const showPasswordRequirements = ref(false)
+    const show_password_requirements = ref(false)
 
     const result = ref({
         message: '',
         is_error: false
     })
 
-    const formData = ref({
+    const form_data = ref({
         username: '',
         password: ''
     })
 
-    const passwordRequirements = ref([
+    const password_requirements = ref([
         { text: 'At least 8 characters', isValid: false },
         { text: 'At least one uppercase character', isValid: false },
         { text: 'At least one lowercase character', isValid: false },
         { text: 'At least one number', isValid: false },
-        { text: 'At least one special character (#?!@$%^&*)', isValid: false }
+        { text: 'At least one special character', isValid: false }
     ])
 
 // Function to validate password while typing
     const checkRequirements = () => {
-        const password = formData.value.password;
+        const password = form_data.value.password;
 
-        passwordRequirements.value[0].isValid = password.length >= 8;
-        passwordRequirements.value[1].isValid = /[A-Z]/.test(password);
-        passwordRequirements.value[2].isValid = /[a-z]/.test(password);
-        passwordRequirements.value[3].isValid = /\d/.test(password);
-        passwordRequirements.value[4].isValid = /[#?!@$%^&*]/.test(password);
+        password_requirements.value[0].isValid = password.length >= 8
+        password_requirements.value[1].isValid = /[A-Z]/.test(password)
+        password_requirements.value[2].isValid = /[a-z]/.test(password)
+        password_requirements.value[3].isValid = /\d/.test(password)
+        password_requirements.value[4].isValid = /[`~!@#$%^&*()_\-+=\/\\|,?<>;:'"\.]/.test(password)
 
-        showPasswordRequirements.value = true;
+        show_password_requirements.value = true;
     };
 
     const hideChecker = () => {
-        if (!formData.value.password) {
-            showPasswordRequirements.value = false
+        if (!form_data.value.password) {
+            show_password_requirements.value = false
         }
     }
 
     const toggleForm = () => {
         isLogin.value = !isLogin.value
-        formData.value.password = ''
+        form_data.value.password = ''
         checkRequirements()
-        showPasswordRequirements.value = false
+        show_password_requirements.value = false
         result.value = { message: '', is_error: false }
     }
     
     const validatePassword = (password) => {
-        const passwordRegex = /^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*]).{8,}$/
-        return passwordRegex.test(password)
+        const password_regex = /^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[`~!@#$%^&*()_\-+=\/\\|,?<>;:'"\.]).{8,}$/
+        return password_regex.test(password)
     }
 
     const handleSubmit = async () => {
         result.value = { message: '', is_error: false }
 
-        if (!isLogin.value && !validatePassword(formData.value.password)) {
+        if (!isLogin.value && !validatePassword(form_data.value.password)) {
             result.value = { message: 'Password does not meet requirements', is_error: true }
             return
         }
 
         try {
             const response = isLogin.value
-                ? await axios.post(`${apiStore.rest_url}/login`, formData.value)
-                : await axios.post(`${apiStore.rest_url}/users`, formData.value)
+                ? await axios.post(`${import.meta.env.VITE_REST_URL}/login`, form_data.value)
+                : await axios.post(`${import.meta.env.VITE_REST_URL}/users`, form_data.value)
 
             if (response.status == 200 || response.status == 204) {
                 result.value = {
@@ -151,35 +149,33 @@
 
 
 <style scoped>
-.auth {
+.parent {
     display: flex;
     flex-direction: column;
     align-items: center;
-    height: 50vh;
-    width: 25vw;
+    text-align: center;
+    width: 30%;
+    min-width: 320px;
     padding: 20px;
     border: 3px solid var(--vue-green);
     background-color: var(--foreground);
 }
 
-.form-container {
-    width: 80%;
-}
-
 .form-data {
     display: flex;
     flex-direction: column;
+    position: relative;
 }
 
 .form-data label {
-    font-size: 14pt;
+    font-size: 1.5em;
     text-align: left;
     margin-top: 10px;
 }
 
 .form-data input {
-    height: 40px;
-    font-size: 14pt;
+    font-size: 1.25em;
+    min-height: 40px;
     justify-content: center;
     align-items: center;
 }
@@ -188,19 +184,12 @@
     outline: none;
 }
 
-button {
+.submit {
     width: 100%;
     font-size: 14pt;
     padding: 10px;
-    background-color: var(--vue-green);
-    border: none;
-    cursor: pointer;
     margin-top: 20px;
     margin-bottom: 20px;
-}
-
-button:hover {
-    background-color: var(--vue-green);
 }
 
 .link {
@@ -214,25 +203,14 @@ button:hover {
     text-decoration: none;
 }
 
-.error {
-    color: red;
-    font: bold;
-}
-
-.success {
-    color: var(--vue-green);
-    font: bold;
-}
-
-
 .password-requirements {
     position: absolute;
-    top: 50%; /* Adjust as needed */
-    left: 65%; /* Positions the box to the right of the password input */
+    top: 70%;
+    left: 120%;
     padding: 10px;
     border: 1px solid #ddd;
     background-color: var(--foreground);
-    width: 300px; /* Adjust width as needed */
+    width: 300px;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
     z-index: 10;
 }

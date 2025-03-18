@@ -1,13 +1,12 @@
 import { ref, watchEffect } from 'vue'
 import axios from 'axios'
-import { useApiStore, useWebSocketStore } from '@/store/api'
+import { useWebSocketStore } from '@/store/api'
 import { useUserStore } from '@/store/user'
 
 
 export async function fetchUserData() {
     try {
-        const apiStore = useApiStore()
-        const response = await axios.get(`${apiStore.rest_url}/users/metadata`, {
+        const response = await axios.get(`${import.meta.env.VITE_REST_URL}/users/metadata`, {
             headers: {
                 Authorization: `Bearer ${localStorage.getItem('token')}`
             }
@@ -28,9 +27,7 @@ export const verifyToken = async () => {
 
     if (token) {
         try {
-            const apiStore = useApiStore()
-
-            const response = await axios.post(`${apiStore.rest_url}/verify-token`, {}, {
+            const response = await axios.post(`${import.meta.env.VITE_REST_URL}/verify-token`, {}, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }

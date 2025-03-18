@@ -1,29 +1,39 @@
 <template>
     <div>
         <form @submit.prevent="sendMessage" autocomplete="off" class="bar">
-            <input type="text" id="content" v-model="content"
-                   placeholder="Type a message..." />
-            <button type="submit">Send</button>
+            <textarea id="content" v-model="content"
+                                   placeholder="Type a message..."
+                                   @keydown.enter.exact.prevent="sendMessage"
+                                   @keydown.enter.shift.exact="lineBreak">
+            </textarea>
+            <button type="submit" class="button-gray submit">Send</button>
         </form>
     </div>
 </template>
 
 <script setup>
     import { ref, onMounted } from 'vue'
-    import { useApiStore } from '@/store/api'
     import { useUserStore } from '@/store/user'
     import axios from 'axios'
 
-    const apiStore = useApiStore()
     const userStore = useUserStore()
-    const content = ref(null)
+    const content = ref('')
 
-    // Make async
+    const lineBreak = (event) => {
+        event.preventDefault();
+
+        if (!content.value) {
+            content.value = ''
+        }
+
+        content.value += '\n'
+    }
+
     const sendMessage = async () => {
         if (content.value) {
             try {
                 const response = await axios.post(
-                    `${apiStore.rest_url}/messages`,
+                    `${import.meta.env.VITE_REST_URL}/messages`,
                     {
                         content: content.value,
                         room_id: userStore.current_room.room_id,
@@ -47,39 +57,32 @@
 
 <style scoped>
 .bar {
-    min-height: 60px;
     display: flex;
     flex-direction: row;
-    align-items: stretch;
+    height: 3em;
 }
 
-input {
-    font-size: 14pt;
+textarea {
+    font-family: inherit;
+    font-size: 1.25rem;
     flex-grow: 1;
-    justify-content: stretch;
-    padding-left: 30px;
+    padding: 10px;
     color: white;
     background-color: var(--foreground);
     border: none;
+    resize: none;
 }
 
-input:focus {
+textarea:focus {
     outline: none;
 }
 
-button {
+.submit {
     font-size: 14pt;
     min-width: 90px;
-    color: white;
-    cursor: pointer;
-    background-color: var(--foreground);
-    border: none;
-    border-left: 3px solid var(--vue-green);
-}
-
-button:hover {
-    background-color: var(--vue-green);
-    color: var(--foreground);
+    border-top: none;
+    border-bottom: none;
+    border-right: none;
 }
 
 </style>

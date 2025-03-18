@@ -7,8 +7,10 @@
             </p>
 
             <ul>
-                <li v-for="message in messages" :key="message.created_at">
-                    <strong style="font-weight: bold;">{{ message.username }}</strong>: {{ message.content }}
+                <li v-for="message in messages" :key="message.created_at" 
+                           style="list-style-type:none; margin-top: 15px;">
+                    <strong class="username">{{ message.username }}<br></strong>
+                    <span v-html="formatMessage(message.content)" class="message"></span>
                 </li>
             </ul>
         </div>
@@ -19,13 +21,12 @@
 
 <script setup>
     import { ref, onMounted, watch } from 'vue'
-    import { useApiStore, useWebSocketStore } from '@/store/api'
+    import { useWebSocketStore } from '@/store/api'
     import { useUserStore } from '@/store/user'
     import TypingBar from './TypingBar.vue'
     import axios from 'axios'
 
     const userStore = useUserStore()
-    const apiStore = useApiStore()
     const webSocketStore = useWebSocketStore()
 
     const messages = ref([])
@@ -34,6 +35,10 @@
     const has_more_messages = ref(true)
 
     const socket = ref(null)
+
+    const formatMessage = (message) => {
+        return message.replace(/\n/g, '<br>')
+    }
 
     const getOldMessages = async (before = null) => {
         try {
@@ -46,8 +51,8 @@
             const limit = 20
 
             const url = before
-            ? `${apiStore.rest_url}/messages/${userStore.current_room.room_id}?limit=${limit}&before=${before}`
-            : `${apiStore.rest_url}/messages/${userStore.current_room.room_id}?limit=${limit}`
+            ? `${import.meta.env.VITE_REST_URL}/messages/${userStore.current_room.room_id}?limit=${limit}&before=${before}`
+            : `${import.meta.env.VITE_REST_URL}/messages/${userStore.current_room.room_id}?limit=${limit}`
 
             const response = await axios.get(url, {
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
@@ -162,12 +167,15 @@
     height: 90%;
 }
 
-li {
+.username {
+    font-size: 16pt;
+    font-weight: bold;
+    color: var(--vue-green);
+}
+
+.message {
     font-size: 14pt;
-    list-style-type: none;
     color: white;
-    margin-top: 10px;
-    padding-right: 20px;
     word-break: break-word;
 }
 

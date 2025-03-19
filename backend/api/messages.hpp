@@ -248,7 +248,6 @@ void definePostMessage(httplib::Server& svr, ChatRoomDB& database, WebSocketMana
                 cass_uuid_string(user_uuid, user_id_str);
                 message["user_id"] = user_id_str;
                 message["content"] = content;
-                message["Authorization"] = auth_header;
 
                 ws_manager.broadcastToRoom(room_id, message.dump());
             }

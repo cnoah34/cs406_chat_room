@@ -1,5 +1,5 @@
 <template>
-    <div style="display: flex; flex-direction: column;">
+    <div class="wrapper">
         <nav style="display: flex; flex-direction: row-reverse;">
             <button v-if="isAuthenticated" @click="handleLogout" class="button-gray logout">Logout</button>
             <button v-if="userStore.current_room"
@@ -30,6 +30,12 @@
 
 
 <style scoped>
+.wrapper {
+    display: flex;
+    flex-direction: column;
+    min-width: 960px;
+}
+
 .logout {
     font-size: 1.5rem;
     width: 7rem;
@@ -47,20 +53,18 @@
     background-color: var(--vt-c-black);
     display: flex;
     flex-direction: row;
-    height: 85vh;
 }
 
 .home .left {
-    height: 100%;
-    width: 300px;
+    min-width: 300px;
     border: 3px solid var(--vue-green);
 }
 
 .home .right {
     flex-grow: 1;
-    height: 100%;
     border: 3px solid var(--vue-green);
     border-left: none;
+    max-height: 80vh;
 }
 
 </style>

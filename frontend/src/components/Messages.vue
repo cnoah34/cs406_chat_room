@@ -21,13 +21,13 @@
 
 <script setup>
     import { ref, onMounted, watch } from 'vue'
-    import { useWebSocketStore } from '@/store/api'
+    import axios from 'axios'
+    import WebSocketService from '@/services/WebSocketService'
     import { useUserStore } from '@/store/user'
     import TypingBar from './TypingBar.vue'
-    import axios from 'axios'
 
     const userStore = useUserStore()
-    const webSocketStore = useWebSocketStore()
+    const websocket = new WebSocketService()
 
     const messages = ref([])
 
@@ -103,7 +103,7 @@
                 getOldMessages()
 
                 // Connect to the current room
-                webSocketStore.connectWebSocket(userStore.current_room.room_id)
+                websocket.connect(userStore.current_room.room_id)
             }
         },
         { immediate: true }
@@ -111,17 +111,13 @@
 
     // Watch for new messages received, add them to messages
     watch(
-        () => webSocketStore.new_message,
-        (new_state, old_state) => {
-            if (new_state && new_state !== old_state) {
-                // TODO: Consider adding check for room_id here (not in message payload currently)
-                messages.value.push(webSocketStore.new_message_data)
-
-                webSocketStore.new_message_data = []
-                webSocketStore.new_message = false
+        () => websocket.messages.value,
+        (new_messages) => {
+            while (websocket.messages.value.length > 0) {
+                messages.value.push(websocket.messages.value.shift())
             }
         },
-        { immediate: true }
+        { deep: true, immediate: true }
     )
     
     onMounted(() => {

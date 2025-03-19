@@ -42,7 +42,7 @@ int main() {
 
     const char* key_path = std::getenv("SSL_KEY_PATH");
     if (key_path == nullptr) {
-        std::cerr << "SSL_CERT_PATH environment variable not set" << std::endl;
+        std::cerr << "SSL_KEY_PATH environment variable not set" << std::endl;
         return 1;
     }
 
@@ -107,49 +107,39 @@ int main() {
             ws_manager.removeUserFromRoom(user_data->room_id, ws);
         };
 
+        // Only message currently is a request to connect to a room
         ws_behavior.message = [&](uWS::WebSocket<true, true, UserData>* ws, std::string_view message, uWS::OpCode op_code) {
             //std::cout << "Received message: "<< message << std::endl;
 
             try {
                 json body = json::parse(message);
 
-                if (!body.contains("Authorization")) return;
+                if (!body.contains("Authorization") || !body.contains("room_id")) return;
 
+                // Verify token and get user_id as CassUuid
                 std::optional<CassUuid> user_uuid_opt = getUserIdFromToken(body["Authorization"]);
                 if (!user_uuid_opt.has_value()) return;
                 CassUuid user_uuid = user_uuid_opt.value();
 
-                std::string room_id;
-                if (body.contains("room_id")) {
-                    room_id = body["room_id"];
-                }
-                else if (body.contains("message") && body["message"].contains("room_id")) {
-                    room_id = body["message"]["room_id"];
-                }
-                else return;
-
+                // Get room_id as CassUuid
+                std::string room_id = body["room_id"];
                 CassUuid room_uuid;
                 if (cass_uuid_from_string(room_id.c_str(), &room_uuid) != CASS_OK) return;
  
+                // Check if user belongs to the room
                 if (!isInRoom(database, room_uuid, user_uuid)) return;
 
-                // User asking to connect to a room
-                if (body.contains("room_id")) {
-                    UserData* user_data = ws->getUserData();
-                    if (!user_data) return;
+                // Connect the user to the room 
+                UserData* user_data = ws->getUserData();
+                if (!user_data) return;
 
-                    if (!user_data->room_id.empty()) {
-                        ws_manager.removeUserFromRoom(user_data->room_id, ws);
-                    }
-
-                    user_data->room_id = room_id;
-
-                    ws_manager.addUserToRoom(room_id, ws);
+                if (!user_data->room_id.empty()) {
+                    ws_manager.removeUserFromRoom(user_data->room_id, ws);
                 }
-                else if (body.contains("message") && body["message"].contains("room_id")) {
-                    // User sending message
-                    ws_manager.broadcastToRoom(room_id, body["message"]);
-                }
+
+                user_data->room_id = room_id;
+
+                ws_manager.addUserToRoom(room_id, ws);
             }
             catch (const std::exception& e) {
                 std::cerr << "Error parsing message: " << e.what() << std::endl;

@@ -1,5 +1,5 @@
 <template>
-    <div style="display: flex; flex-direction: column;">
+    <div class="wrapper">
         <nav style="display: flex; flex-direction: row-reverse;">
             <button @click="router.push('/home')" class="back button-gray">Back</button>
         </nav>
@@ -23,10 +23,10 @@
 
 <script setup>
     import { ref, onMounted } from 'vue'
-    import { RouterLink, RouterView, useRouter } from 'vue-router'
+    import axios from 'axios'
+    import { useRouter } from 'vue-router'
     import { isAuthenticated, fetchUserData } from '@/auth'
     import { useUserStore } from '@/store/user'
-    import axios from 'axios'
 
     import OwnerActions from '@/components/OwnerActions.vue'
     import AdminActions from '@/components/AdminActions.vue'
@@ -62,16 +62,17 @@
 
 
 <style scoped>
-.back {
-    font-size: 1.5rem;
-    width: 6rem;
-    border-bottom: none;
+.wrapper {
+    display: flex;
+    flex-direction: column;
+    min-width: 960px;
+    height: 80vh;
 }
 
 .options-parent {
+    flex-grow: 1;
     display: flex;
     flex-direction: column;
-    height: 85vh;
     background-color: var(--vt-c-black);
     border: 3px solid var(--vue-green);
 }
@@ -83,7 +84,6 @@
     color: white;
     font-size: 1.25rem;
     padding: 10px;
-    gap: 20px;
     justify-content: space-evenly;
 }
 
@@ -91,6 +91,7 @@
     display: flex;
     flex-direction: row;
     justify-content: space-evenly;
+    margin-bottom: 20px;
 }
 
 

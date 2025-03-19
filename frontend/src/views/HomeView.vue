@@ -53,6 +53,7 @@
     background-color: var(--vt-c-black);
     display: flex;
     flex-direction: row;
+    max-height: 80vh;
 }
 
 .home .left {
@@ -64,7 +65,6 @@
     flex-grow: 1;
     border: 3px solid var(--vue-green);
     border-left: none;
-    max-height: 80vh;
 }
 
 </style>

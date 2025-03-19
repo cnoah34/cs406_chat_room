@@ -9,7 +9,9 @@
             <ul>
                 <li v-for="message in messages" :key="message.created_at" 
                            style="list-style-type:none; margin-top: 15px;">
-                    <strong class="username">{{ message.username }}<br></strong>
+                    <strong class="username">{{ message.username }}</strong>
+                    <span style="padding-left: 1rem;">{{ formatDate(message.created_at) }}</span>
+                    <br>
                     <span v-html="formatMessage(message.content)" class="message"></span>
                 </li>
             </ul>
@@ -35,6 +37,31 @@
     const has_more_messages = ref(true)
 
     const socket = ref(null)
+
+    const formatDate = (utc_date) => {
+        if (!utc_date) return ''
+
+        const timestamp = new Date(utc_date)
+
+        const today = new Date()
+        const is_today = timestamp.toDateString() === today.toDateString()
+
+        const local_date = is_today
+        ? ''
+        : timestamp.toLocaleDateString(undefined, {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+        })
+
+        const local_time = timestamp.toLocaleTimeString(undefined, {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true,
+        })
+
+        return `${local_date} ${local_time}`
+    }
 
     const formatMessage = (message) => {
         return message.replace(/\n/g, '<br>')

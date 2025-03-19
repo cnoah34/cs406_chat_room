@@ -1,14 +1,14 @@
 <template>
-    <div class="parent">
+    <div class="flex-col-centered">
         <button @click="router.push('/home')" class="button-gray back">Back</button>
-        <div class="container">
+        <div class="action-container">
             <h1 style="color: var(--vue-green);">Join a Room</h1>
             <form @submit.prevent="handleSubmit" autocomplete="off">
                 <label for="room_name">Room ID</label>
                 <input type="text" id="room_id" v-model="room_id"
                                                   placeholder="Enter the room ID" />
 
-                <button type="submit" class="button-green submit">Submit</button>
+                <button type="submit" class="button-gray submit">Submit</button>
             </form>
             <p v-if="result.message" :class="{'error': result.is_error, 
                      'success': !result.is_error}">{{ result.message }}</p>
@@ -68,65 +68,5 @@
 
 
 <style scoped>
-.parent {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    display: flex;
-    flex-direction: column;
-    height: 50vh;
-    width: 25vw;
-}
-
-.back {
-    font-size: 1.5rem;
-    width: 6rem;
-    border-bottom: none;
-}
-
-.container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    min-height: 340px;
-    padding: 20px;
-    background-color: var(--vt-c-black);
-    border: 3px solid var(--vue-green);
-    background-color: var(--foreground);
-}
-
-h1 {
-    font-size: 30pt;
-}
-
-form {
-    display: flex;
-    flex-direction: column;
-    width: 90%;
-}
-
-form label {
-    font-size: 20pt;
-    text-align: left;
-    margin-top: 20px;
-}
-
-form input {
-    font-size: 14pt;
-    min-height: 40px;
-}
-
-form input:focus {
-    outline: none;
-}
-
-.submit {
-    width: 100%;
-    height: 6vh;
-    font-size: 18pt;
-    margin-top: 20px;
-    margin-bottom: 30px;
-}
-
+@import '@/assets/actions.css';
 </style>

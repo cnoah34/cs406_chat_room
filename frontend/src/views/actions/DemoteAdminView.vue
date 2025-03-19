@@ -1,20 +1,21 @@
 <template>
-    <div class="parent">
-        <router-link to="/room-options" class="back">Back</router-link>
-        <div class="container">
+    <div class="flex-col-centered">
+        <button @click="router.push('/room-options')" class="button-gray back">Back</button>
+        <div class="action-container">
             <h1 style="color: var(--vue-green);">Demote Admin to User</h1>
-            <div class="admins-container" v-if="admins.length > 0">
-                <ul>
-                    <li v-for="(admin, index) in admins" :key="index" @click="selected_admin = admin"
-                        :class="{ selected: admin === selected_admin }">
+            <div class="users-container" v-if="admins.length > 0">
+                <ul class="user-list-ul">
+                    <li v-for="(admin, index) in admins" :key="index" 
+                               @click="selected_admin = admin" class="user-list-li" 
+                               :class="{ selected: admin === selected_admin }">
                         {{ admin.username }}
                     </li>
                 </ul>
             </div>
             <div v-if="selected_admin">
-                <p style="color: white; font-size: 14pt; padding: 10px;">Demote: {{ selected_admin.username }}</p>
+                <p style="color: white; font-size: 1.5rem; padding: 10px;">Demote: {{ selected_admin.username }}</p>
             </div>
-            <button @click="demoteAdmin()">Submit</button>
+            <button @click="demoteAdmin()" class="button-gray submit">Submit</button>
             <p v-if="result.message" :class="{'error': result.is_error, 
                      'success': !result.is_error}">{{ result.message }}</p>
         </div>
@@ -25,9 +26,10 @@
 <script setup>
     import { ref, onMounted } from 'vue'
     import axios from 'axios'
-    import { RouterLink } from 'vue-router'
+    import { useRouter } from 'vue-router'
     import { useUserStore } from '@/store/user'
-
+    
+    const router = useRouter()
     const userStore = useUserStore()
 
     const admins = ref([])
@@ -40,6 +42,8 @@
     })
 
     const demoteAdmin = async () => {
+        if (!selected_admin.value) return
+
         result.value = { message: '', is_error: false }
 
         try {
@@ -83,7 +87,7 @@
     const getAdmins = async () => {
         try {
             const response = 
-            await axios.get(`${apiStore.rest_url}/rooms/admins/${userStore.current_room.room_id}`)
+            await axios.get(`${import.meta.env.VITE_REST_URL}/rooms/admins/${userStore.current_room.room_id}`)
 
             if (response.status == 200 && response.data.admins_info) {
                 admins.value = response.data.admins_info
@@ -101,125 +105,5 @@
 
 
 <style scoped>
-.parent {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    display: flex;
-    flex-direction: column;
-    height: 70vh;
-    width: 25vw;
-}
-
-.back {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 80px;
-    height: 40px;
-    font-size: 14pt;
-    background-color: var(--foreground);
-    border: 3px solid var(--vue-green);
-    border-bottom: none;
-    color: white;
-    cursor: pointer;
-    text-decoration: none;
-}
-
-.back:hover {
-    background-color: var(--vue-green);
-    color: var(--foreground);
-}
-
-.container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    min-height: 340px;
-    height: 70vh;
-    padding: 20px;
-    background-color: var(--vt-c-black);
-    border: 3px solid var(--vue-green);
-    background-color: var(--foreground);
-}
-
-h1 {
-    font-size: 24pt;
-}
-
-.admins-container {
-    background-color: var(--vt-c-black);
-    border: 2px solid var(--vue-green);
-    height: 40vh;
-    max-height: 40vh;
-    padding: 10px;
-}
-
-ul {
-    list-style-type: none;
-    margin: 0;
-    padding: 0;
-    margin-bottom: 15px;
-    min-width: 18vw;
-    overflow-y: auto;
-    flex-grow: 1;
-    scrollbar-color: white var(--foreground);
-}
-
-ul::-webkit-scrollbar-thumb {
-    background: white;
-}
-
-ul::-webkit-scrollbar-track {
-    background: var(--foreground);
-}
-
-li {
-    padding-left: 20px;
-    padding-right: 20px;
-    color: white;
-    cursor: pointer;
-    text-decoration: underline;
-    font-size: 14pt;
-    word-break: break-word;
-}
-
-li:hover {
-    text-decoration: none;
-}
-
-.selected {
-    color: var(--vue-green);
-    text-decoration: none;
-    cursor: default;
-    font-size: 18pt;
-}
-
-button {
-    width: 80px;
-    height: 40px;
-    font-size: 16pt;
-    background-color: var(--foreground);
-    border: 3px solid var(--vue-green);
-    color: white;
-    cursor: pointer;
-    margin-top: 20px;
-    margin-bottom: 20px;
-}
-
-button:hover {
-    background-color: var(--vue-green);
-}
-
-.error {
-    color: red;
-    font: bold;
-}
-
-.success {
-    color: var(--vue-green);
-    font: bold;
-}
-
+@import '@/assets/actions.css';
 </style>

@@ -1,11 +1,12 @@
 <template>
-    <div class="parent">
-        <router-link to="/room-options" class="back">Back</router-link>
-        <div class="container">
+    <div class="flex-col-centered">
+        <button @click="router.push('/room-options')" class="button-gray back">Back</button>
+        <div class="action-container">
             <h1 style="color: var(--vue-green);">Remove a User</h1>
             <div class="users-container" v-if="users.length > 0">
-                <ul>
-                    <li v-for="(user, index) in users" :key="index" @click="selected_user = user"
+                <ul class="user-list-ul">
+                    <li v-for="(user, index) in users" :key="index" 
+                        @click="selected_user = user" class="user-list-li"
                         :class="{ selected: user === selected_user }">
                         {{ user.username }}
                     </li>
@@ -14,7 +15,7 @@
             <div v-if="selected_user">
                 <p style="color: white; font-size: 14pt; padding: 10px;">Remove: {{ selected_user.username }}</p>
             </div>
-            <button @click="removeUser()">Submit</button>
+            <button @click="removeUser()" class="button-gray submit">Submit</button>
             <p v-if="result.message" :class="{'error': result.is_error, 
                      'success': !result.is_error}">{{ result.message }}</p>
         </div>
@@ -25,9 +26,10 @@
 <script setup>
     import { ref, onMounted } from 'vue'
     import axios from 'axios'
-    import { RouterLink } from 'vue-router'
+    import { useRouter } from 'vue-router'
     import { useUserStore } from '@/store/user'
 
+    const router = useRouter()
     const userStore = useUserStore()
 
     const users = ref([])
@@ -40,6 +42,8 @@
     })
 
     const removeUser = async () => {
+        if (!selected_user.value) return
+
         result.value = { message: '', is_error: false }
 
         try {
@@ -101,125 +105,5 @@
 
 
 <style scoped>
-.parent {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    display: flex;
-    flex-direction: column;
-    height: 70vh;
-    width: 25vw;
-}
-
-.back {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 80px;
-    height: 40px;
-    font-size: 14pt;
-    background-color: var(--foreground);
-    border: 3px solid var(--vue-green);
-    border-bottom: none;
-    color: white;
-    cursor: pointer;
-    text-decoration: none;
-}
-
-.back:hover {
-    background-color: var(--vue-green);
-    color: var(--foreground);
-}
-
-.container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    min-height: 340px;
-    height: 70vh;
-    padding: 20px;
-    background-color: var(--vt-c-black);
-    border: 3px solid var(--vue-green);
-    background-color: var(--foreground);
-}
-
-h1 {
-    font-size: 30pt;
-}
-
-.users-container {
-    background-color: var(--vt-c-black);
-    border: 2px solid var(--vue-green);
-    height: 40vh;
-    max-height: 40vh;
-    padding: 10px;
-}
-
-ul {
-    list-style-type: none;
-    margin: 0;
-    padding: 0;
-    margin-bottom: 15px;
-    min-width: 18vw;
-    overflow-y: auto;
-    flex-grow: 1;
-    scrollbar-color: white var(--foreground);
-}
-
-ul::-webkit-scrollbar-thumb {
-    background: white;
-}
-
-ul::-webkit-scrollbar-track {
-    background: var(--foreground);
-}
-
-li {
-    padding-left: 20px;
-    padding-right: 20px;
-    color: white;
-    cursor: pointer;
-    text-decoration: underline;
-    font-size: 14pt;
-    word-break: break-word;
-}
-
-li:hover {
-    text-decoration: none;
-}
-
-.selected {
-    color: var(--vue-green);
-    text-decoration: none;
-    cursor: default;
-    font-size: 18pt;
-}
-
-button {
-    width: 80px;
-    height: 40px;
-    font-size: 16pt;
-    background-color: var(--foreground);
-    border: 3px solid var(--vue-green);
-    color: white;
-    cursor: pointer;
-    margin-top: 20px;
-    margin-bottom: 20px;
-}
-
-button:hover {
-    background-color: var(--vue-green);
-}
-
-.error {
-    color: red;
-    font: bold;
-}
-
-.success {
-    color: var(--vue-green);
-    font: bold;
-}
-
+@import '@/assets/actions.css';
 </style>

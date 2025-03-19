@@ -1,9 +1,9 @@
 <template>
-    <div class="parent">
-        <router-link to="/room-options" class="back">Back</router-link>
-        <div class="container">
+    <div class="flex-col-centered">
+        <button @click="router.push('/room-options')" class="button-gray back">Back</button>
+        <div class="action-container">
             <h1 style="color: var(--vue-green);">Are you sure you want to leave?</h1>
-            <button @click="leaveRoom()">Leave</button>
+            <button @click="leaveRoom()" class="button-gray submit">Leave</button>
             <p v-if="result.message" :class="{'error': result.is_error, 
                      'success': !result.is_error}">{{ result.message }}</p>
         </div>
@@ -14,7 +14,7 @@
 <script setup>
     import { ref } from 'vue'
     import axios from 'axios'
-    import { RouterLink, RouterView, useRouter } from 'vue-router'
+    import { useRouter } from 'vue-router'
     import { useUserStore } from '@/store/user'
 
     const router = useRouter()
@@ -63,75 +63,5 @@
 
 
 <style scoped>
-.parent {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    display: flex;
-    flex-direction: column;
-}
-
-.back {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 80px;
-    height: 40px;
-    font-size: 14pt;
-    background-color: var(--foreground);
-    border: 3px solid var(--vue-green);
-    border-bottom: none;
-    color: white;
-    cursor: pointer;
-    text-decoration: none;
-}
-
-.back:hover {
-    background-color: var(--vue-green);
-    color: var(--foreground);
-}
-
-.container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    height: 250px;
-    padding: 20px;
-    background-color: var(--vt-c-black);
-    border: 3px solid var(--vue-green);
-    background-color: var(--foreground);
-}
-
-h1 {
-    font-size: 18pt;
-    margin-top: 20px;
-}
-
-button {
-    width: 100px;
-    min-height: 50px;
-    font-size: 16pt;
-    background-color: var(--foreground);
-    border: 3px solid var(--vue-green);
-    color: white;
-    cursor: pointer;
-    margin-top: 40px;
-    margin-bottom: 20px;
-}
-
-button:hover {
-    background-color: var(--vue-green);
-}
-
-.error {
-    color: red;
-    font: bold;
-}
-
-.success {
-    color: var(--vue-green);
-    font: bold;
-}
-
+@import '@/assets/actions.css';
 </style>

@@ -1,8 +1,8 @@
 *.out
+*.o
 *.sh
 *.pem
 *.key
 *.crt
 misc/*
-server.o
 .env*

@@ -1,5 +1,5 @@
 <template>
-    <div class="flex-col-centered">
+    <div class="absolute-center">
         <button @click="router.push('/room-options')" class="button-gray back">Back</button>
         <div class="action-container">
             <h1 style="color: var(--vue-green);">Are you sure you want to leave?</h1>

@@ -65,8 +65,10 @@
 .wrapper {
     display: flex;
     flex-direction: column;
+    align-self: center;
     min-width: 960px;
-    height: 80vh;
+    width: 60vw;
+    height: 70vh;
 }
 
 .options-parent {
